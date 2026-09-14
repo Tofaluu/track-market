@@ -149,7 +149,6 @@ export function Instructions({ multi }: InstructionsProps) {
         style={{
           transform: `scale(${scale})`,
           transformOrigin: "center center",
-          transition: "transform 0.05s ease-out",
         }}
         class="w-full max-w-4xl shrink-0 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 shadow-2xl backdrop-blur"
       >
