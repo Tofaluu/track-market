@@ -1,199 +1,59 @@
-# TrackMarket 📈
+# TrackMarket
 
-<p align="center">
-  <strong>A high-performance, real-time financial market analytics dashboard and equity research terminal.</strong>
-  <br />
-  Built with <strong>Preact</strong>, <strong>@preact/signals</strong>, <strong>TypeScript</strong>, <strong>Tailwind CSS v4</strong>, and <strong>Google Gemini 3.6 Flash</strong>.
-</p>
+A fast, client-side financial market analytics dashboard and equity research terminal.
 
-<p align="center">
-  <a href="https://tofaluu.github.io/track-market/">
-    <img src="https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-10b981?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Demo" />
-  </a>
-</p>
+Built with **Preact**, **@preact/signals**, **TypeScript**, **Tailwind CSS v4**, and **Google Gemini 3.6 Flash**.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Preact-10.28-673ab8?style=flat-square&logo=preact&logoColor=white" alt="Preact" />
-  <img src="https://img.shields.io/badge/Signals-Reactive_State-purple?style=flat-square" alt="Preact Signals" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-v4.2-06b6d4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Gemini_AI-3.6_Flash-4285f4?style=flat-square&logo=google&logoColor=white" alt="Gemini AI" />
-  <img src="https://img.shields.io/badge/Vite-7.3-646cff?style=flat-square&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/Markets-NYSE_•_NASDAQ_•_TSX-amber?style=flat-square" alt="Markets Supported" />
-</p>
-
-> 🚀 **Live Web Application:** [https://tofaluu.github.io/track-market/](https://tofaluu.github.io/track-market/)  
-> *(Runs entirely in your browser — zero installation or setup required)*
+[Live Demo](https://trackmarket.dev)
 
 ---
 
-## 🌟 Overview
+## Overview
 
-**TrackMarket** is an institutional-grade, client-side financial analytics terminal designed for lightning-fast tracking, visualization, and equity research across North American stock exchanges (NYSE, NASDAQ, and TSX).
+TrackMarket is a serverless Single Page Application (SPA) designed for tracking, visualizing, and researching stocks across North American exchanges (NYSE, NASDAQ, and TSX). 
 
-Combining **Preact Signals** for direct fine-grained DOM updates with **Google Gemini 3.6 Flash** and **Google Search Grounding**, TrackMarket enables users to fetch real-world market prices, explore historical valuations, track authentic exchange trading sessions, and generate forward-looking institutional equity research reports in real time.
+It uses **Preact Signals** for fine-grained, reactive DOM updates, allowing live stock prices to stream and update without triggering heavy component re-renders. By integrating **Google Gemini 3.6 Flash** with **Search Grounding**, the app can fetch real-time market data directly from the web and generate structured analyst reports, bypassing the need for a dedicated backend API.
 
----
+## Features
 
-## ⚡ Core Engineering Highlights
+- **Search-Grounded Data:** Bypasses traditional expensive financial APIs by using Google Search Grounding to fetch live quotes.
+- **Preact Signals Architecture:** Reactive state management for high-frequency price updates without React-style render cycles.
+- **Zero-Dependency SVG Charting:** Hand-crafted, responsive SVG vector charts with interactive crosshairs and multi-timeframe toggling—no heavy external charting libraries.
+- **Smart Synchronization:** Automatically syncs portfolio prices at market open (9:30 AM ET) and close (4:00 PM ET).
+- **AI Analyst Suite:** Generates structured research reports covering business moats, growth catalysts, risk analysis, and recent price drivers.
+- **Local Persistence:** Watchlists and API keys are stored securely in the browser's `localStorage`.
 
-### 🤖 Gemini AI Research & Live Grounding Engine
-- **Search-Grounded Price Verification**: Queries real-time trading quotes from public financial feeds across NYSE, NASDAQ, and the Toronto Stock Exchange (TSX) using Google Search Grounding.
-- **Smart Catch-Up Synchronization**: Serverless schedule detection that automatically syncs quotes at 9:30 AM ET (Market Open) and 4:00 PM ET (Market Close) upon opening the tab or via an active background timer, with zero ongoing backend hosting costs.
-- **Automatic Live Sync on Add**: Adding any stock or ETF instantly triggers an individual search-grounded quote synchronization in the background.
-- **Batch AI Synchronization**: Refresh an entire portfolio of stocks simultaneously with a single click (**"✨ Sync All"**), automatically updating 1D intraday curves and valuation benchmarks.
-- **Past Week Price Drivers**: Plain-English, jargon-free breakdown of why a stock moved over the past 7 days (earnings, company announcements, macroeconomic or political shifts).
-- **Institutional Equity Research**: Instant generation of structured analyst overviews:
-  - **Business & Fund Model**: Revenue drivers, margins, and ETF asset allocation breakdowns (e.g., `XEQT`, `VEQT`).
-  - **Growth Catalysts & Trajectory**: Bull/bear scenarios and forward 2–5 year tailwinds.
-  - **Risk & Headwind Analysis**: Macroeconomic, regulatory, and competitive threat audits.
-  - **Interactive Financial Q&A**: Real-time contextual answering for any custom asset question.
+## Keyboard Shortcuts
 
-### ⏱️ Real-World Market Schedule & Exchange Session Tracking
-- **Exchange Hours Detection**: Accurately tracks Eastern Time (ET) regular trading sessions (Mon–Fri, 9:30 AM – 4:00 PM ET).
-- **Official Closing Price Integrity**: Anchors temporal search prompts to Eastern Time and enforces negative constraints against "Previous Close" snippets to guarantee authentic session close quotes.
-- **Dynamic Session Badges**: Displays real-time status badges in the top toolbar and bottom status bar indicating whether NYSE, NASDAQ, and TSX markets are currently active or closed.
+- `Shift + A` - Add a random stock
+- `Shift + D` - Delete selected stocks
+- `Shift + C` - Clear selection
+- `Shift + U` - Undo action
+- `Shift + R` - Redo action
 
-### 🇨🇦 First-Class Canadian (TSX) & US Equities Support
-- Native multi-currency formatting (`CAD` vs `USD`).
-- Curated presets for top Canadian index ETFs (`XEQT`, `VEQT`, `VFV`) and TSX powerhouses (`SHOP`, `RY`, `TD`, `BNS`, `ENB`, `CSU`, `ATD`).
-- Universal procedurally generated equity engine for *any* custom ticker symbol worldwide.
+## Development
 
-### 📊 Zero-Dependency Responsive SVG Vector Charting
-- High-performance, hand-crafted SVG rendering pipeline with zero external graphing library overhead.
-- Dynamic responsive container tracking via `ResizeObserver`.
-- Smooth area gradient fills, mouse-tracking crosshair guides, interactive data tooltips, and timeframe toggling (`1D Intraday`, `1Y`, `5Y`, `ALL`).
-- Sparkline vector trends embedded directly inside every watchlist card.
+TrackMarket requires Node.js v18+.
 
-### 💾 Robust Client-Side Persistence & Command Pattern History
-- Watchlist customizations, added stocks, deleted entries, and verified live prices persist automatically in browser `localStorage`.
-- Comprehensive Command Pattern (`execute`, `undo`, `redo`) enables seamless keyboard-driven `Shift+U` (undo) and `Shift+R` (redo).
-
----
-
-## 🖥️ Feature Tour
-
-| Feature | Capabilities |
-| :--- | :--- |
-| **Real-Time Watchlist** | Monitor unlimited stocks with live price updates, intraday sparklines, and synchronized gain/loss indicators. |
-| **Batch & Auto Sync** | Automatic twice-daily catch-up sync at market open & close, plus one-click portfolio refresh powered by Gemini AI with Google Search. |
-| **Dynamic Vector Chart** | Interactive SVG charting with hover crosshairs, exact price pill tooltips, volume statistics, and multi-timeframe toggling. |
-| **Fundamental Table** | Multi-year valuation history, Market Cap vs. Share Price metrics, and Year-over-Year (YoY) growth calculations. |
-| **AI Analyst Suite** | Executive overviews, past week news & price drivers, forward catalysts, risk audits, and interactive freeform analyst Q&A. |
-| **Global Directory** | Instant search and addition across 80+ prominent stocks and ETFs or custom tickers, featuring unadded quote placeholders and automatic live synchronization on add. |
-| **Market Status Indicator** | Real-time badge tracking whether North American exchanges are currently open or closed. |
-
----
-
-## ⌨️ Keyboard Shortcuts
-
-TrackMarket is built for keyboard-first efficiency:
-
-| Shortcut | Action |
-| :--- | :--- |
-| `Shift + A` | Add a random stock to your watchlist |
-| `Shift + D` | Delete currently selected stocks |
-| `Shift + C` | Clear active selection |
-| `Shift + U` | Undo last user action |
-| `Shift + R` | Redo last undone action |
-
-*Shortcuts are intelligently disabled while typing inside search inputs or modal dialogs.*
-
----
-
-## 🛠️ Architecture & Tech Stack
-
-```
-track-market/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml          # Automated GitHub Actions Pages deployment
-├── src/
-│   ├── components/
-│   │   ├── AddStockModal.tsx   # Searchable stock directory & ticker generator
-│   │   ├── AiAnalystView.tsx   # AI research suite & custom financial Q&A
-│   │   ├── AiSettingsModal.tsx # Secure client-side Gemini API key management
-│   │   ├── ChartView.tsx       # Zero-dependency SVG vector chart & crosshairs
-│   │   ├── Instructions.tsx    # Welcome overview & multi-stock summary
-│   │   ├── ListView.tsx        # Financial valuation table with YoY growth
-│   │   ├── StatusBar.tsx       # Market clock, active feed status & tick counters
-│   │   ├── StockDetails.tsx    # Responsive detail routing engine
-│   │   ├── StockList.tsx       # Watchlist sidebar with search & sparklines
-│   │   └── Toolbar.tsx         # Top application header & market status badge
-│   ├── services/
-│   │   ├── gemini.ts           # Gemini 3.6 Flash + Google Search Grounding service
-│   │   └── smartSync.ts        # Automated twice-daily market milestone catch-up sync
-│   ├── constants.ts            # Application configuration & default text
-│   ├── format.ts               # Currency, percent change, and volume formatters
-│   ├── state.ts                # Centralized Preact Signals store & market schedule
-│   ├── stocks.ts               # Seed data records & realistic 2026 market baselines
-│   ├── tickerDatabase.ts       # Global ticker directory & procedural stock factory
-│   ├── undo.ts                 # Command Pattern undo/redo stack
-│   ├── App.tsx                 # Root layout & global shortcut handler
-│   └── main.tsx                # Client bootstrap
-├── index.html                  # HTML5 entry with modern meta & favicon
-├── package.json
-├── tsconfig.json
-└── vite.config.ts              # Vite configuration with relative base paths
+```bash
+git clone https://github.com/Tofaluu/track-market.git
+cd track-market
+npm install
+npm run dev
 ```
 
----
+## AI Setup
 
-## 💻 Local Development
+To enable live price syncing and AI research, you will need a free Gemini API key:
+1. Get a key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+2. Click the Settings icon in TrackMarket.
+3. Paste and save your key.
 
-*For developers wishing to run, inspect, or contribute to the source code locally:*
+*Note: Your key is stored locally in your browser and communicates directly with Google's API.*
 
-### Prerequisites
-- **Node.js**: `v18.0.0` or higher
-- **npm** or **pnpm**
+## Deployment
 
-### Quickstart
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Tofaluu/track-market.git
-   cd track-market
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Start the local development server:**
-   ```bash
-   npm run dev
-   ```
-   Open `http://localhost:5173` in your browser.
-
-4. **Build for production:**
-   ```bash
-   npm run build
-   ```
+The project is configured to deploy automatically to GitHub Pages via GitHub Actions whenever changes are pushed to the `main` branch. 
 
 ---
-
-## 🔑 AI Features Setup (Optional)
-
-To enable live Google Search price lookups and AI equity research:
-1. Obtain a free API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-2. In TrackMarket, click the **⚙️** (Settings) button in the top right.
-3. Paste your API key and click **Save Key**.
-
-> [!NOTE]
-> **Privacy First**: Your API key is stored strictly within your browser's `localStorage` and communicates directly with Google's API endpoints. It is never transmitted to or logged on any intermediate server.
-
----
-
-## 🌐 Deployment & Custom Domains
-
-TrackMarket is built as a serverless single-page application (SPA) preconfigured for automated deployment on **GitHub Pages**:
-
-- **Automated CI/CD**: Pushing to `main` triggers `.github/workflows/deploy.yml`, which compiles the TypeScript assets and deploys the static bundle to GitHub Pages.
-- **Custom Domains**: Configured with relative base paths (`base: "./"`), allowing you to point any custom apex domain or subdomain via CNAME without broken asset paths.
-
----
-
-<p align="center">
-  Crafted by <strong>Thomas Liu</strong> • 2026
-</p>
+*Crafted by Thomas Liu (2026)*
