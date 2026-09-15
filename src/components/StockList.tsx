@@ -148,12 +148,17 @@ export function StockList() {
                   const profitLoss = (currentPrice - pos.average_cost) * pos.quantity;
                   const profitLossPct = ((currentPrice - pos.average_cost) / pos.average_cost) * 100;
                   const isPositive = profitLoss >= 0;
+                  const selected = store.isSelected(pos.symbol);
 
                   return (
                     <button
                       key={pos.symbol}
                       type="button"
-                      class="group relative flex w-full flex-col rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-2.5 text-left transition-all hover:border-zinc-700 hover:bg-zinc-850/60"
+                      class={`group relative flex w-full flex-col rounded-xl border p-2.5 text-left transition-all ${
+                        selected
+                          ? "border-emerald-500/50 bg-zinc-850/90 shadow-md ring-1 ring-emerald-500/20"
+                          : "border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-850/60"
+                      }`}
                       onClick={(event) => {
                         store.clickStock(pos.symbol, event.shiftKey);
                         event.stopPropagation();
