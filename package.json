@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@preact/signals": "^2.8.1",
+    "@supabase/supabase-js": "^2.116.0",
     "@tailwindcss/vite": "^4.2.1",
     "goober": "^2.1.18",
     "marked": "^18.0.12",

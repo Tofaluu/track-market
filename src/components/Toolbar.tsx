@@ -4,6 +4,7 @@ import { APP_TITLE } from "../constants";
 import { store } from "../state";
 import { AddStockModal } from "./AddStockModal";
 import { AiSettingsModal } from "./AiSettingsModal";
+import { supabase } from "../services/supabase";
 
 type ToolbarProps = {
   onAdd?: () => void;
@@ -173,6 +174,33 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
               <circle cx="12" cy="12" r="3"/>
             </svg>
           </button>
+
+          <div class="h-4 w-[1px] bg-zinc-800" />
+
+          {/* User Auth */}
+          {store.user.value ? (
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-medium text-zinc-400">
+                {store.user.value.user_metadata?.username || store.user.value.email?.split("@")[0]}
+              </span>
+              <button
+                type="button"
+                onClick={() => supabase.auth.signOut()}
+                title="Sign Out"
+                class="flex h-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 px-2.5 text-xs text-zinc-400 hover:border-zinc-700 hover:text-white transition"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => (store.isAuthModalOpen.value = true)}
+              class="flex h-7 items-center justify-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white shadow-sm hover:bg-violet-500 transition"
+            >
+              Sign In
+            </button>
+          )}
         </div>
       </header>
 

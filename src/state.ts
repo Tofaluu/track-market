@@ -17,6 +17,7 @@ import {
   batchFetchYahooFinanceQuotes,
 } from "./services/yahooFinance";
 import { setLastSyncTimestamp } from "./services/smartSync";
+import { supabase } from "./services/supabase";
 
 export type ViewMode = "chart" | "ai";
 export type Timeframe = "1D" | "1Y" | "5Y" | "ALL";
@@ -87,8 +88,62 @@ class StockStore {
   isSyncingAll = signal<boolean>(false);
   syncMessage = signal<string | null>(null);
 
+  // Authentication state
+  session = signal<any>(null);
+  user = signal<any>(null);
+  isAuthModalOpen = signal<boolean>(false);
+
   private undoManager = new UndoManager();
   private historyVersion = signal(0);
+
+  constructor() {
+    // Check initial auth state
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      this.session.value = session;
+      this.user.value = session?.user ?? null;
+      this.loadSupabaseWatchlist();
+    });
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((_event, session) => {
+      this.session.value = session;
+      this.user.value = session?.user ?? null;
+      if (session?.user) {
+        this.loadSupabaseWatchlist();
+      }
+    });
+  }
+
+  async loadSupabaseWatchlist() {
+    if (!this.user.value) return;
+    const { data } = await supabase
+      .from("watchlists")
+      .select("symbol")
+      .order("created_at", { ascending: true });
+    
+    if (data) {
+      const dbSymbols = data.map((r: any) => r.symbol);
+      const localStockMap = new Map(this.stocks.value.map(s => [s.symbol, s]));
+      
+      const nextStocks: Stock[] = [];
+      for (const sym of dbSymbols) {
+        if (localStockMap.has(sym)) {
+          nextStocks.push(localStockMap.get(sym)!);
+        } else {
+          const catalog = stockRecords.find((s) => s.symbol === sym);
+          nextStocks.push(catalog ? { ...catalog } : createStockFromTicker(sym));
+        }
+      }
+      
+      this.stocks.value = nextStocks;
+      this.save();
+      this.normalizeSelection();
+      
+      if (this.stocks.value.length > 0) {
+        this.syncAllStocks();
+      }
+    }
+  }
 
   save() {
     persistWatchlist(this.stocks.value);
@@ -101,6 +156,9 @@ class StockStore {
     this.stocks.value = [];
     this.selectedSymbols.value = new Set<string>();
     this.save();
+    if (this.user.value) {
+      supabase.from("watchlists").delete().match({ user_id: this.user.value.id }).then();
+    }
   }
 
   canUndo = computed(() => {
@@ -498,6 +556,9 @@ class StockStore {
       this.selectedSymbols.value = new Set([stock.symbol]);
       this.viewMode.value = "chart";
       this.save();
+      if (this.user.value) {
+        supabase.from("watchlists").insert({ user_id: this.user.value.id, symbol: stock.symbol }).then();
+      }
     };
 
     const undoAdd = () => {
@@ -506,6 +567,9 @@ class StockStore {
       this.stocks.value = next;
       this.normalizeSelection();
       this.save();
+      if (this.user.value) {
+        supabase.from("watchlists").delete().match({ user_id: this.user.value.id, symbol: stock.symbol }).then();
+      }
     };
 
     this.pushHistory({ do: doAdd, undo: undoAdd });
@@ -547,14 +611,17 @@ class StockStore {
 
       if (next.length === 0) {
         this.selectedSymbols.value = new Set();
-        this.save();
-        return;
+      } else {
+        const nextIndex = Math.max(0, Math.min(topMostDeleted - 1, next.length - 1));
+        this.selectedSymbols.value = new Set([next[nextIndex].symbol]);
+        this.viewMode.value = "chart";
       }
-
-      const nextIndex = Math.max(0, Math.min(topMostDeleted - 1, next.length - 1));
-      this.selectedSymbols.value = new Set([next[nextIndex].symbol]);
-      this.viewMode.value = "chart";
       this.save();
+      if (this.user.value) {
+        for (const sym of symbolsToDelete) {
+          supabase.from("watchlists").delete().match({ user_id: this.user.value.id, symbol: sym }).then();
+        }
+      }
     };
 
     const undoDelete = () => {
@@ -564,6 +631,11 @@ class StockStore {
         this.viewMode.value = "chart";
       }
       this.save();
+      if (this.user.value) {
+        for (const sym of symbolsToDelete) {
+          supabase.from("watchlists").insert({ user_id: this.user.value.id, symbol: sym }).then();
+        }
+      }
     };
 
     this.pushHistory({ do: doDelete, undo: undoDelete });

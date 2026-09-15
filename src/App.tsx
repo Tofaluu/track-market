@@ -3,6 +3,7 @@ import { StockDetails } from "./components/StockDetails";
 import { StatusBar } from "./components/StatusBar";
 import { StockList } from "./components/StockList";
 import { Toolbar } from "./components/Toolbar";
+import { AuthModal } from "./components/AuthModal";
 import { store } from "./state";
 import { initSmartCatchUpSync } from "./services/smartSync";
 
@@ -61,6 +62,7 @@ export function App() {
       </section>
 
       <StatusBar />
+      <AuthModal />
     </main>
   );
 }
