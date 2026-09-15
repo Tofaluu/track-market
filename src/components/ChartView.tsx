@@ -401,7 +401,21 @@ export function ChartView({ stock }: ChartViewProps) {
                 class="h-6 inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 text-xs font-semibold text-violet-300 hover:bg-violet-500/20 hover:text-white transition"
               >
                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                <span>AI Research & Live Check</span>
+                <span>AI Research</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (store.user.value) {
+                    store.isTradeModalOpen.value = true;
+                  } else {
+                    store.isAuthModalOpen.value = true;
+                  }
+                }}
+                class="h-6 inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-500 shadow-sm transition"
+              >
+                TRADE
               </button>
             </div>
           </div>

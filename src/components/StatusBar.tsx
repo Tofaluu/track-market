@@ -1,10 +1,22 @@
-// Bottom status bar displaying selected stock live price, market clock, and list metrics.
+import { useState, useEffect } from "preact/hooks";
 import { formatPercentChange, formatPrice, formatSignedChange } from "../format";
 import { store } from "../state";
 
 export function StatusBar() {
   const selected = store.selectedStock.value;
   const lastTick = store.lastMarketUpdate.value;
+  const isSyncing = store.isSyncingAll.value;
+  
+  const [showSyncing, setShowSyncing] = useState(false);
+
+  useEffect(() => {
+    if (isSyncing) {
+      const t = setTimeout(() => setShowSyncing(true), 300);
+      return () => clearTimeout(t);
+    } else {
+      setShowSyncing(false);
+    }
+  }, [isSyncing]);
 
   return (
     <footer class="flex h-8 shrink-0 items-center justify-between border-t border-zinc-850 bg-zinc-950 px-4 text-xs text-zinc-400">
@@ -50,7 +62,7 @@ export function StatusBar() {
           class="hover:text-zinc-300 transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
           title="Click to sync all stocks now"
         >
-          {store.isSyncingAll.value ? (
+          {showSyncing ? (
             <span class="inline-flex items-center gap-1 text-emerald-400">
               <svg class="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

@@ -4,6 +4,8 @@ import { StatusBar } from "./components/StatusBar";
 import { StockList } from "./components/StockList";
 import { Toolbar } from "./components/Toolbar";
 import { AuthModal } from "./components/AuthModal";
+import { TradeModal } from "./components/TradeModal";
+import { Toast } from "./components/Toast";
 import { store } from "./state";
 import { initSmartCatchUpSync } from "./services/smartSync";
 
@@ -63,6 +65,8 @@ export function App() {
 
       <StatusBar />
       <AuthModal />
+      <TradeModal isOpen={store.isTradeModalOpen.value} onClose={() => store.isTradeModalOpen.value = false} />
+      <Toast />
     </main>
   );
 }

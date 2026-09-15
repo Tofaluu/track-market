@@ -1,5 +1,5 @@
 // Centralized application state, undoable actions, and real-time market simulation engine.
-import { computed, signal } from "@preact/signals";
+import { computed, signal, effect } from "@preact/signals";
 import { MAX_STOCKS } from "./constants";
 import type { Stock } from "./stocks";
 import { stockRecords, generateIntraday, getStockExpectedCurrency } from "./stocks";
@@ -65,21 +65,49 @@ function persistWatchlist(stocks: Stock[]) {
     console.warn("Failed to persist watchlist", err);
   }
 }
+const UI_STATE_KEY = "marketpulse_ui_state";
+
+function loadUiState() {
+  try {
+    const raw = localStorage.getItem(UI_STATE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export type Position = {
+  symbol: string;
+  quantity: number;
+  average_cost: number;
+};
+
+const PORTFOLIO_STATE_KEY = "marketpulse_portfolio_state";
+
+function loadPortfolioState() {
+  try {
+    const raw = localStorage.getItem(PORTFOLIO_STATE_KEY);
+    return raw ? JSON.parse(raw) : { cashBalance: 0, positions: [] };
+  } catch {
+    return { cashBalance: 0, positions: [] };
+  }
+}
 
 class StockStore {
   // Initialize with persisted watchlist if present, otherwise empty watchlist
   private initialStocks = loadPersistedWatchlist() ?? [];
+  private initialUi = loadUiState();
 
   stocks = signal<Stock[]>(this.initialStocks);
-  selectedSymbols = signal<Set<string>>(new Set<string>());
-  viewMode = signal<ViewMode>("chart");
-  chartTimeframe = signal<Timeframe>("1D");
+  selectedSymbols = signal<Set<string>>(new Set<string>(this.initialUi.selectedSymbols || []));
+  viewMode = signal<ViewMode>(this.initialUi.viewMode || "chart");
+  chartTimeframe = signal<Timeframe>(this.initialUi.chartTimeframe || "1D");
   chartMetric = signal<ChartMetric>("price");
 
   // Market session schedule (Mon-Fri 9:30 AM - 4:00 PM Eastern Time)
   isMarketOpen = signal<boolean>(isMarketOpen());
   lastMarketUpdate = signal<string>(
-    isMarketOpen() ? "Regular Trading Session" : "4:00 PM ET (Market Close)"
+    this.initialUi.lastMarketUpdate || (isMarketOpen() ? "Regular Trading Session" : "4:00 PM ET (Market Close)")
   );
   searchQuery = signal<string>("");
 
@@ -92,6 +120,26 @@ class StockStore {
   session = signal<any>(null);
   user = signal<any>(null);
   isAuthModalOpen = signal<boolean>(false);
+  isTradeModalOpen = signal<boolean>(false);
+
+
+  // Portfolio state
+  private initialPortfolio = loadPortfolioState();
+  cashBalance = signal<number>(this.initialPortfolio.cashBalance);
+  positions = signal<Position[]>(this.initialPortfolio.positions);
+  activeTab = signal<"watchlist" | "portfolio">(this.initialUi.activeTab || "watchlist");
+
+  // Global Toast
+  toastMessage = signal<string | null>(null);
+
+  showToast(msg: string) {
+    this.toastMessage.value = msg;
+    setTimeout(() => {
+      if (this.toastMessage.value === msg) {
+        this.toastMessage.value = null;
+      }
+    }, 3500);
+  }
 
   private undoManager = new UndoManager();
   private historyVersion = signal(0);
@@ -102,6 +150,7 @@ class StockStore {
       this.session.value = session;
       this.user.value = session?.user ?? null;
       this.loadSupabaseWatchlist();
+      this.loadSupabasePortfolio();
     });
 
     // Listen for auth changes
@@ -110,8 +159,61 @@ class StockStore {
       this.user.value = session?.user ?? null;
       if (session?.user) {
         this.loadSupabaseWatchlist();
+        this.loadSupabasePortfolio();
+      } else {
+        this.cashBalance.value = 0;
+        this.positions.value = [];
+        this.activeTab.value = "watchlist";
       }
     });
+
+    // Auto-persist UI state
+    effect(() => {
+      try {
+        localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+          selectedSymbols: Array.from(this.selectedSymbols.value),
+          activeTab: this.activeTab.value,
+          viewMode: this.viewMode.value,
+          chartTimeframe: this.chartTimeframe.value,
+          lastMarketUpdate: this.lastMarketUpdate.value,
+        }));
+      } catch {}
+    });
+
+    // Auto-persist Portfolio state for instant load
+    effect(() => {
+      try {
+        localStorage.setItem(PORTFOLIO_STATE_KEY, JSON.stringify({
+          cashBalance: this.cashBalance.value,
+          positions: this.positions.value,
+        }));
+      } catch {}
+    });
+  }
+
+  async loadSupabasePortfolio() {
+    if (!this.user.value) return;
+    
+    // Load cash balance
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("cash_balance")
+      .eq("id", this.user.value.id)
+      .single();
+    
+    if (profile) {
+      this.cashBalance.value = Number(profile.cash_balance);
+    }
+
+    // Load positions
+    const { data: positions } = await supabase
+      .from("positions")
+      .select("*")
+      .eq("user_id", this.user.value.id);
+      
+    if (positions) {
+      this.positions.value = positions as Position[];
+    }
   }
 
   async loadSupabaseWatchlist() {
