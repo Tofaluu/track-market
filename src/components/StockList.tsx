@@ -164,7 +164,7 @@ export function StockList() {
                         event.stopPropagation();
                       }}
                     >
-                      <div class="flex items-center justify-between">
+                      <div class="flex w-full items-center justify-between">
                         <div class="flex items-center gap-1.5">
                           <span class="font-bold tracking-tight text-white">{pos.symbol}</span>
                           <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
@@ -177,7 +177,7 @@ export function StockList() {
                           </span>
                         </div>
                       </div>
-                      <div class="mt-1.5 flex items-center justify-between gap-2">
+                      <div class="mt-1.5 flex w-full items-center justify-between gap-2">
                         <span class="truncate text-[11px] font-medium text-zinc-400">
                           Avg: {formatPrice(pos.average_cost)}
                         </span>
@@ -220,7 +220,7 @@ export function StockList() {
                 }}
               >
                 {/* Top Row: Symbol, Currency Badge & Current Price */}
-                <div class="flex items-center justify-between">
+                <div class="flex w-full items-center justify-between">
                   <div class="flex items-center gap-1.5">
                     <span class="font-bold tracking-tight text-white">{stock.symbol}</span>
                     <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
@@ -240,7 +240,7 @@ export function StockList() {
                 </div>
 
                 {/* Bottom Row: Full Company Name & Performance Badge */}
-                <div class="mt-1.5 flex items-center justify-between gap-2">
+                <div class="mt-1.5 flex w-full items-center justify-between gap-2">
                   <span class="truncate text-[11px] font-medium text-zinc-400">
                     {stock.name}
                   </span>
