@@ -115,8 +115,15 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
       <div class="mb-4 flex flex-wrap items-start justify-between gap-4 border-b border-zinc-800/80 pb-4 shrink-0">
         <div>
           <div class="flex items-center gap-2.5 flex-wrap">
-              <h2 class="text-2xl font-bold tracking-tight text-white">{stock.name}</h2>
-              <span class="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-semibold text-zinc-300">
+            <button
+              type="button"
+              onClick={() => (store.selectedSymbols.value = new Set())}
+              class="md:hidden flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white transition mr-1"
+            >
+              <svg class="h-4 w-4 pr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <h2 class="text-2xl font-bold tracking-tight text-white">{stock.name}</h2>
+            <span class="rounded-md bg-zinc-800 px-2 py-0.5 text-xs font-semibold text-zinc-300">
                 {stock.symbol}
               </span>
               <span class="rounded-md bg-zinc-900 border border-zinc-700/80 px-2 py-0.5 text-xs font-semibold text-zinc-300">

@@ -7,7 +7,7 @@ export function StockList() {
   const searchQuery = store.searchQuery.value;
 
   return (
-    <aside class="flex h-full w-[310px] shrink-0 flex-col border-r border-zinc-800 bg-zinc-950">
+    <aside class={`flex h-full w-full md:w-[310px] shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 ${store.selectedStock.value ? 'hidden md:flex' : 'flex'}`}>
       {/* Search & Watchlist Header */}
       <div class="border-b border-zinc-850 p-3 bg-zinc-900/40">
         <div class="mb-3 flex rounded-lg bg-zinc-950 p-1 ring-1 ring-zinc-800">

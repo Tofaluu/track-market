@@ -10,7 +10,7 @@ export function StockDetails() {
   const isAiView = store.viewMode.value === "ai";
 
   return (
-    <section class="h-full min-w-0 flex-1 overflow-hidden bg-zinc-950 text-zinc-100">
+    <section class={`h-full min-w-0 flex-1 overflow-hidden bg-zinc-950 text-zinc-100 ${selected ? 'flex flex-col' : 'hidden md:flex md:flex-col'}`}>
       {count === 0 ? <Instructions multi={false} /> : null}
       {count > 1 ? <Instructions multi={true} /> : null}
       {count === 1 && selected ? (
