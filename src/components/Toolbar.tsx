@@ -14,7 +14,6 @@ type ToolbarProps = {
 };
 
 export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(false);
   const canSingle = store.hasSingleSelection.value;
   const mode = store.viewMode.value;
@@ -95,7 +94,7 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => store.isAddModalOpen.value = true}
               disabled={!store.canAdd.value}
               title="Search & add any stock from global directory"
               class="flex h-7 items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-600/15 px-3 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
@@ -205,7 +204,7 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
       </header>
 
       {/* Universal Search & Add Modal */}
-      <AddStockModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <AddStockModal isOpen={store.isAddModalOpen.value} onClose={() => store.isAddModalOpen.value = false} />
 
       {/* AI Settings Modal */}
       <AiSettingsModal

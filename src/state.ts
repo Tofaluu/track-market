@@ -121,6 +121,7 @@ class StockStore {
   user = signal<any>(null);
   isAuthModalOpen = signal<boolean>(false);
   isTradeModalOpen = signal<boolean>(false);
+  isAddModalOpen = signal<boolean>(false);
 
 
   // Portfolio state

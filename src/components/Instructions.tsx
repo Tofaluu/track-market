@@ -286,10 +286,17 @@ export function Instructions({ multi }: InstructionsProps) {
             </button>
           </div>
         ) : (
-          <div class="mt-5 text-center rounded-xl bg-zinc-950 border border-zinc-800 p-3 shadow-inner">
-            <span class="text-sm font-medium text-emerald-400">
-              Search for a stock ticker in the sidebar to add your first asset!
-            </span>
+          <div class="mt-5 text-center">
+            <button
+              type="button"
+              onClick={() => store.isAddModalOpen.value = true}
+              class="inline-flex items-center gap-2.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 hover:bg-emerald-500 hover:shadow-emerald-900/50 transition"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Add Your First Stock</span>
+            </button>
           </div>
         )}
       </div>
