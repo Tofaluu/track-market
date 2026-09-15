@@ -274,7 +274,7 @@ export function Instructions({ multi }: InstructionsProps) {
           </form>
         </div>
 
-        {store.stocks.value.length > 0 && (
+        {store.stocks.value.length > 0 ? (
           <div class="mt-5 text-center">
             <button
               type="button"
@@ -284,6 +284,12 @@ export function Instructions({ multi }: InstructionsProps) {
               <span>View {store.stocks.value[0].symbol} Live Analytics</span>
               <span class="text-base">→</span>
             </button>
+          </div>
+        ) : (
+          <div class="mt-5 text-center rounded-xl bg-zinc-950 border border-zinc-800 p-3 shadow-inner">
+            <span class="text-sm font-medium text-emerald-400">
+              Search for a stock ticker in the sidebar to add your first asset!
+            </span>
           </div>
         )}
       </div>
