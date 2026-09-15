@@ -286,9 +286,14 @@ class StockStore {
 
   canAdd = computed(() => this.stocks.value.length < MAX_STOCKS);
 
-  canDelete = computed(
-    () => this.stocks.value.length > 0 && this.selectedSymbols.value.size > 0
-  );
+  canDelete = computed(() => {
+    if (this.stocks.value.length === 0 || this.selectedSymbols.value.size === 0) return false;
+    for (const symbol of this.selectedSymbols.value) {
+      const pos = this.positions.value.find(p => p.symbol === symbol);
+      if (pos && pos.quantity > 0) return false;
+    }
+    return true;
+  });
 
   statusLabel = computed(() => {
     const count = this.stocks.value.length;

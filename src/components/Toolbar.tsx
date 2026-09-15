@@ -109,7 +109,11 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
               type="button"
               onClick={onDelete}
               disabled={!store.canDelete.value}
-              title="Delete selected stocks (Delete key)"
+              title={
+                Array.from(store.selectedSymbols.value).some(sym => store.positions.value.some(p => p.symbol === sym && p.quantity > 0))
+                  ? "Cannot remove active positions from watchlist. Sell shares first."
+                  : "Delete selected stocks (Delete key)"
+              }
               class="flex h-7 items-center gap-1.5 rounded-lg border border-rose-600/40 bg-rose-600/15 px-3 text-xs font-semibold text-rose-300 shadow-sm transition hover:bg-rose-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
             >
               <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

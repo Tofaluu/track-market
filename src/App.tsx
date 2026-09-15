@@ -32,6 +32,15 @@ export function App() {
           store.deleteSelectedStocks();
           event.preventDefault();
           return;
+        } else if (store.selectedSymbols.value.size > 0) {
+          const hasHeld = Array.from(store.selectedSymbols.value).some(sym => 
+            store.positions.value.some(p => p.symbol === sym && p.quantity > 0)
+          );
+          if (hasHeld) {
+            store.showToast("Cannot remove active positions from watchlist. Sell shares first.");
+            event.preventDefault();
+            return;
+          }
         }
       }
 
