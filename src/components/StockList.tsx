@@ -76,7 +76,7 @@ export function StockList() {
       </div>
 
       {/* Stock Cards List */}
-      <div class="flex-1 overflow-y-auto p-2 space-y-1.5">
+      <div class="flex-1 overflow-y-auto p-2 pb-6 space-y-1.5">
         {store.activeTab.value === "portfolio" ? (
           <div class="space-y-4">
             <div class="rounded-xl bg-violet-600/10 border border-violet-500/20 p-4 space-y-3">

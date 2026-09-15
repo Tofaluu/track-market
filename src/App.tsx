@@ -51,7 +51,7 @@ export function App() {
   }, []);
 
   return (
-    <main class="flex h-screen w-screen flex-col bg-zinc-950 text-zinc-100 antialiased select-none">
+    <main class="flex h-[100dvh] w-screen flex-col bg-zinc-950 text-zinc-100 antialiased select-none">
       <Toolbar
         onDelete={() => store.deleteSelectedStocks()}
         onUndo={() => store.undo()}

@@ -49,10 +49,15 @@ export function StatusBar() {
               : "bg-rose-500"
           }`}
         />
-        <span>
+        <span class="hidden lg:inline">
           {store.isMarketOpen.value
             ? "TSX / NYSE Regular Session (9:30 AM - 4:00 PM ET)"
             : "Markets Closed • Official Closing Prices Held"}
+        </span>
+        <span class="lg:hidden">
+          {store.isMarketOpen.value
+            ? "Regular Session"
+            : "Market Closed"}
         </span>
         <span>•</span>
         <button
