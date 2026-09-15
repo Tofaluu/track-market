@@ -159,8 +159,10 @@ class StockStore {
       this.session.value = session;
       this.user.value = session?.user ?? null;
       if (session?.user) {
-        this.loadSupabaseWatchlist();
-        this.loadSupabasePortfolio();
+        setTimeout(() => {
+          this.loadSupabaseWatchlist();
+          this.loadSupabasePortfolio();
+        }, 100);
       } else {
         this.cashBalance.value = 0;
         this.positions.value = [];
@@ -219,6 +221,9 @@ class StockStore {
 
   async loadSupabaseWatchlist() {
     if (!this.user.value) return;
+
+    const localSymbols = this.stocks.value.map((s) => s.symbol);
+
     const { data } = await supabase
       .from("watchlists")
       .select("symbol")
@@ -226,6 +231,15 @@ class StockStore {
     
     if (data) {
       const dbSymbols = data.map((r: any) => r.symbol);
+
+      const missingInDb = localSymbols.filter(sym => !dbSymbols.includes(sym));
+      if (missingInDb.length > 0) {
+        for (const sym of missingInDb) {
+           await supabase.from("watchlists").insert({ user_id: this.user.value.id, symbol: sym }).then();
+        }
+        dbSymbols.push(...missingInDb);
+      }
+      
       const localStockMap = new Map(this.stocks.value.map(s => [s.symbol, s]));
       
       const nextStocks: Stock[] = [];
