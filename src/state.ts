@@ -765,7 +765,10 @@ class StockStore {
 
   clickStock(symbol: string, withShift: boolean) {
     const exists = this.stocks.value.some((stock) => stock.symbol === symbol);
-    if (!exists) return;
+    if (!exists) {
+      this.addStockBySymbol(symbol);
+      return;
+    }
 
     const before = new Set(this.selectedSymbols.value);
     const after = new Set(before);
