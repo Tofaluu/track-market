@@ -461,7 +461,7 @@ export function ChartView({ stock }: ChartViewProps) {
         onTouchMove={handlePointerMove}
         onMouseLeave={handlePointerLeave}
         onTouchEnd={handlePointerLeave}
-        class="relative min-h-[340px] flex-1 rounded-xl border border-zinc-800/80 bg-zinc-950 overflow-hidden shadow-2xl flex flex-col justify-center items-center cursor-crosshair"
+        class="relative min-h-[200px] flex-1 rounded-xl border border-zinc-800/80 bg-zinc-950 overflow-hidden shadow-2xl flex flex-col justify-center items-center cursor-crosshair"
       >
         {isLoading ? (
           <div class="flex flex-col items-center gap-3 text-zinc-400">
