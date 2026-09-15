@@ -123,11 +123,11 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
           <div class="rounded-xl bg-zinc-950/50 p-4 border border-zinc-800/50 space-y-3">
             <div class="flex justify-between text-sm">
               <span class="text-zinc-400">Market Price</span>
-              <span class="font-medium text-white">{formatPrice(stock.price, stock.currency)}</span>
+              <span class="font-medium text-white">{formatPrice(stock.price)}</span>
             </div>
             <div class="flex justify-between text-sm">
               <span class="text-zinc-400">Estimated Total</span>
-              <span class="font-bold text-white">{formatPrice(estimatedTotal, stock.currency)}</span>
+              <span class="font-bold text-white">{formatPrice(estimatedTotal)}</span>
             </div>
             
             <div class="my-3 h-px w-full bg-zinc-800/50" />
@@ -139,7 +139,7 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
             <div class="flex justify-between text-xs mt-1.5">
               <span class="text-zinc-500">Shares Owned</span>
               <span class="font-medium text-zinc-300">
-                {ownedShares} ({formatPrice(ownedShares * stock.price, stock.currency)})
+                {ownedShares} ({formatPrice(ownedShares * stock.price)})
               </span>
             </div>
           </div>
