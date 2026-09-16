@@ -2,7 +2,7 @@
 
 A fast, client-side financial market analytics dashboard and equity research terminal.
 
-Built with **Preact**, **@preact/signals**, **TypeScript**, **Tailwind CSS v4**, and **Google Gemini 3.6 Flash**.
+Built with **Preact**, **@preact/signals**, **TypeScript**, **Tailwind CSS v4**, and **Google Gemini 3.7 Flash**.
 
 [Live Demo](https://trackmarket.dev)
 
@@ -12,7 +12,7 @@ Built with **Preact**, **@preact/signals**, **TypeScript**, **Tailwind CSS v4**,
 
 TrackMarket is a serverless Single Page Application (SPA) designed for tracking, visualizing, and researching stocks across North American exchanges (NYSE, NASDAQ, and TSX). 
 
-It uses **Preact Signals** for fine-grained, reactive DOM updates, allowing live stock prices to stream and update without triggering heavy component re-renders. By integrating **Google Gemini 3.6 Flash** with **Search Grounding**, the app can fetch real-time market data directly from the web and generate structured analyst reports, bypassing the need for a dedicated backend API.
+It uses **Preact Signals** for fine-grained, reactive DOM updates, allowing live stock prices to stream and update without triggering heavy component re-renders. By integrating **Google Gemini 3.7 Flash** with **Search Grounding**, the app can fetch real-time market data directly from the web and generate structured analyst reports, bypassing the need for a dedicated backend API.
 
 ## Features
 

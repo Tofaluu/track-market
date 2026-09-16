@@ -70,7 +70,7 @@ export function AiSettingsModal({ isOpen, onClose }: AiSettingsModalProps) {
 
         <div class="mt-4 space-y-3 text-xs text-zinc-300">
           <p class="leading-relaxed">
-            TrackMarket uses <strong>Google Gemini 3.6 Flash</strong> with real-time web search grounding to fetch live stock prices and generate research summaries.
+            TrackMarket uses <strong>Google Gemini 3.7 Flash</strong> with real-time web search grounding to fetch live stock prices and generate research summaries.
           </p>
 
           <div>

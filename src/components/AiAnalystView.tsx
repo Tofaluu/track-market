@@ -139,7 +139,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
                   <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
                   <span class="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-500" />
                 </span>
-                <span>Gemini 3.6 AI Analyst</span>
+                <span>Gemini 3.7 AI Analyst</span>
               </span>
             </div>
 
@@ -331,7 +331,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
             <div class="flex flex-col items-center justify-center py-16 text-center">
               <div class="h-8 w-8 animate-spin rounded-full border-2 border-violet-500 border-t-transparent mb-3" />
               <span class="text-xs font-medium text-zinc-300">
-                Gemini 3.6 is analyzing {stock.symbol}...
+                Gemini 3.7 is analyzing {stock.symbol}...
               </span>
               <span class="text-[11px] text-zinc-500 mt-1">
                 {activeTopic === "past_week"
