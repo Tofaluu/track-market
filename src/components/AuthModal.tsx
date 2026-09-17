@@ -1,10 +1,9 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import { store } from "../state";
 import { supabase } from "../services/supabase";
 
 export function AuthModal() {
   const isOpen = store.isAuthModalOpen.value;
-  if (!isOpen) return null;
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -14,6 +13,20 @@ export function AuthModal() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) {
+      setEmail("");
+      setUsername("");
+      setPassword("");
+      setConfirmPassword("");
+      setErrorMsg("");
+      setSuccessMsg("");
+      setIsLogin(true);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
