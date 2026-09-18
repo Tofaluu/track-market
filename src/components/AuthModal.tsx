@@ -23,6 +23,7 @@ export function AuthModal() {
       setErrorMsg("");
       setSuccessMsg("");
       setIsLogin(true);
+      store.authModalIntent.value = null;
     }
   }, [isOpen]);
 
@@ -30,6 +31,13 @@ export function AuthModal() {
 
   const isValidEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const handleAuthSuccess = () => {
+    store.isAuthModalOpen.value = false;
+    if (store.authModalIntent.value === "portfolio") {
+      store.activeTab.value = "portfolio";
+    }
   };
 
   const handleSubmit = async (e: Event) => {
@@ -49,7 +57,7 @@ export function AuthModal() {
           password,
         });
         if (error) throw error;
-        store.isAuthModalOpen.value = false;
+        handleAuthSuccess();
       } else {
         if (!isValidEmail(email)) {
           throw new Error("Please enter a valid email address.");
@@ -91,7 +99,7 @@ export function AuthModal() {
         if (error) throw error;
         setSuccessMsg("Account created! You are now logged in.");
         setTimeout(() => {
-          store.isAuthModalOpen.value = false;
+          handleAuthSuccess();
         }, 1500);
       }
     } catch (err: any) {

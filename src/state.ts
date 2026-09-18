@@ -82,6 +82,15 @@ export type Position = {
   average_cost: number;
 };
 
+export type Transaction = {
+  id: string;
+  created_at: string;
+  symbol: string;
+  trade_type: "BUY" | "SELL";
+  quantity: number;
+  price: number;
+};
+
 const PORTFOLIO_STATE_KEY = "marketpulse_portfolio_state";
 
 function loadPortfolioState() {
@@ -120,6 +129,7 @@ class StockStore {
   session = signal<any>(null);
   user = signal<any>(null);
   isAuthModalOpen = signal<boolean>(false);
+  authModalIntent = signal<"portfolio" | null>(null);
   isTradeModalOpen = signal<boolean>(false);
   isAddModalOpen = signal<boolean>(false);
 
@@ -128,7 +138,9 @@ class StockStore {
   private initialPortfolio = loadPortfolioState();
   cashBalance = signal<number>(this.initialPortfolio.cashBalance);
   positions = signal<Position[]>(this.initialPortfolio.positions);
+  transactions = signal<Transaction[]>([]);
   activeTab = signal<"watchlist" | "portfolio">(this.initialUi.activeTab || "watchlist");
+  portfolioSubTab = signal<"positions" | "history">("positions");
   displayCurrency = signal<"CAD" | "USD">(this.initialUi.displayCurrency || "CAD");
   cadToUsdRate = signal<number>(0.74); // Fallback rate
 
@@ -222,6 +234,17 @@ class StockStore {
       
     if (positions) {
       this.positions.value = positions as Position[];
+    }
+
+    // Load transactions
+    const { data: txData } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", this.user.value.id)
+      .order("created_at", { ascending: false });
+
+    if (txData) {
+      this.transactions.value = txData as Transaction[];
     }
   }
 

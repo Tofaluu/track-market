@@ -28,6 +28,7 @@ export function StockList() {
               if (store.user.value) {
                 store.activeTab.value = "portfolio";
               } else {
+                store.authModalIntent.value = "portfolio";
                 store.isAuthModalOpen.value = true;
               }
             }}
@@ -145,8 +146,23 @@ export function StockList() {
             </div>
             
             <div class="space-y-1.5">
-              <div class="px-1 text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Open Positions</div>
-              {(() => {
+              <div class="flex items-center gap-4 border-b border-zinc-800/50 pb-2 mb-2 px-1">
+                <button 
+                  type="button"
+                  onClick={() => store.portfolioSubTab.value = "positions"}
+                  class={`text-xs font-semibold uppercase tracking-wider transition ${store.portfolioSubTab.value === 'positions' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  Positions
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => store.portfolioSubTab.value = "history"}
+                  class={`text-xs font-semibold uppercase tracking-wider transition ${store.portfolioSubTab.value === 'history' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+                >
+                  History
+                </button>
+              </div>
+              {store.portfolioSubTab.value === "positions" ? (() => {
                 const query = store.searchQuery.value.trim().toLowerCase();
                 const isDisplayCad = store.displayCurrency.value === "CAD";
                 const filteredPositions = store.positions.value.filter(pos => {
@@ -241,6 +257,59 @@ export function StockList() {
                         </div>
                       </div>
                     </button>
+                  );
+                });
+              })() : (() => {
+                if (store.transactions.value.length === 0) {
+                  return (
+                    <div class="p-4 text-center text-xs text-zinc-500">
+                      No trading history yet.
+                    </div>
+                  );
+                }
+
+                const isDisplayCad = store.displayCurrency.value === "CAD";
+                const displayCurrencyLabel = isDisplayCad ? "CAD" : "USD";
+                const usdToCad = 1 / store.cadToUsdRate.value;
+
+                return store.transactions.value.map(tx => {
+                  // tx.price is stored in CAD
+                  const displayPrice = isDisplayCad ? tx.price : tx.price * usdToCad;
+                  const totalDisplay = tx.quantity * displayPrice;
+                  
+                  const isBuy = tx.trade_type === "BUY";
+                  
+                  // Format date nicely
+                  const dateObj = new Date(tx.created_at);
+                  const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                  const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+                  return (
+                    <div key={tx.id} class="flex w-full flex-col rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-2.5 text-left mb-1.5">
+                      <div class="flex w-full items-center justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class={`rounded px-1.5 py-0.5 text-[10px] font-bold ${isBuy ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
+                            {tx.trade_type}
+                          </span>
+                          <span class="font-bold tracking-tight text-white">{tx.symbol}</span>
+                        </div>
+                        <div class="text-right flex items-center gap-1">
+                          <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
+                          <span class="text-xs font-bold tabular-nums text-white">
+                            {formatPrice(totalDisplay)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div class="mt-2 flex w-full items-center justify-between">
+                        <div class="text-[11px] font-medium text-zinc-400">
+                          {tx.quantity} shares @ {formatPrice(displayPrice)}
+                        </div>
+                        <div class="text-[10px] font-medium text-zinc-500">
+                          {dateStr} • {timeStr}
+                        </div>
+                      </div>
+                    </div>
                   );
                 });
               })()}
