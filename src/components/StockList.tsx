@@ -83,7 +83,6 @@ export function StockList() {
               {(() => {
                 const isDisplayCad = store.displayCurrency.value === "CAD";
                 const usdToCad = 1 / store.cadToUsdRate.value;
-                const fxMultiplier = isDisplayCad ? usdToCad : 1;
 
                 const positionsValueDb = store.positions.value.reduce((acc, pos) => {
                   const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
