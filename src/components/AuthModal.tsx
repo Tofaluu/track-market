@@ -6,7 +6,8 @@ export function AuthModal() {
   const isOpen = store.isAuthModalOpen.value;
 
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState("");
+  // Reusing the email state as the identifier for login
+  const [identifier, setIdentifier] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -16,7 +17,7 @@ export function AuthModal() {
 
   useEffect(() => {
     if (!isOpen) {
-      setEmail("");
+      setIdentifier("");
       setUsername("");
       setPassword("");
       setConfirmPassword("");
@@ -28,6 +29,10 @@ export function AuthModal() {
 
   if (!isOpen) return null;
 
+  const isValidEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     setLoading(true);
@@ -36,26 +41,68 @@ export function AuthModal() {
 
     try {
       if (isLogin) {
+        const isEmail = identifier.includes("@");
+        let loginEmail = identifier;
+
+        if (isEmail && !isValidEmail(identifier)) {
+          throw new Error("Please enter a valid email address.");
+        }
+
+        if (!isEmail) {
+          // Attempt to lookup email by username
+          const { data, error: lookupError } = await supabase
+            .from("profiles")
+            .select("email")
+            .ilike("username", identifier)
+            .maybeSingle();
+            
+          if (lookupError || !data || !data.email) {
+            throw new Error("Username not found or email lookup failed.");
+          }
+          loginEmail = data.email;
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
-          email,
+          email: loginEmail,
           password,
         });
         if (error) throw error;
         store.isAuthModalOpen.value = false;
       } else {
+        if (!isValidEmail(identifier)) {
+          throw new Error("Please enter a valid email address.");
+        }
         if (password !== confirmPassword) {
           throw new Error("Passwords do not match.");
         }
-        if (!username.trim()) {
+        const cleanUsername = username.trim();
+        if (!cleanUsername) {
           throw new Error("Username is required.");
+        }
+        if (cleanUsername.length < 3) {
+          throw new Error("Username must be at least 3 characters long.");
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+          throw new Error("Username can only contain letters, numbers, and underscores.");
+        }
+
+        // Check if username is already taken
+        const { data: existingUser } = await supabase
+          .from("profiles")
+          .select("username")
+          .ilike("username", cleanUsername)
+          .maybeSingle();
+
+        if (existingUser) {
+          throw new Error("That username is already taken. Please choose another.");
         }
 
         const { error } = await supabase.auth.signUp({
-          email,
+          email: identifier,
           password,
           options: {
             data: {
-              username: username.trim(),
+              username: cleanUsername,
             },
           },
         });
@@ -122,14 +169,14 @@ export function AuthModal() {
           )}
           <div>
             <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-              Email
+              {isLogin ? "Email or Username" : "Email"}
             </label>
             <input
-              type="email"
+              type={isLogin && !identifier.includes("@") ? "text" : "email"}
               required
-              value={email}
-              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
-              placeholder="investor@example.com"
+              value={identifier}
+              onInput={(e) => setIdentifier((e.target as HTMLInputElement).value)}
+              placeholder={isLogin ? "investor@example.com or Username" : "investor@example.com"}
               class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
             />
           </div>
