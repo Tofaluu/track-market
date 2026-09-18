@@ -186,8 +186,9 @@ export function StockList() {
                   const totalValueUsd = currentPriceUsd * pos.quantity;
                   const totalValueDisplay = totalValueUsd * (isDisplayCad ? (1 / store.cadToUsdRate.value) : 1);
                   
-                  // Profit/Loss in Native Currency
+                  // Profit/Loss
                   const profitLossNative = (currentPriceNative - avgCostNative) * pos.quantity;
+                  const profitLossDisplay = profitLossNative * (isDisplayCad ? (1 / store.cadToUsdRate.value) : 1);
                   const profitLossPct = ((currentPriceNative - avgCostNative) / avgCostNative) * 100;
                   const isPositive = profitLossNative >= 0;
                   const selected = store.isSelected(pos.symbol);
@@ -230,9 +231,10 @@ export function StockList() {
                             Avg: {formatPrice(avgCostNative)}
                           </span>
                         </div>
-                        <div class="shrink-0">
+                        <div class="shrink-0 flex items-center gap-1">
+                          <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
                           <div class={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${isPositive ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
-                            <span>{formatSignedChange(profitLossNative)} ({formatPercentChange(profitLossPct)})</span>
+                            <span>{formatSignedChange(profitLossDisplay)} ({formatPercentChange(profitLossPct)})</span>
                             <span>{isPositive ? "↑" : "↓"}</span>
                           </div>
                         </div>

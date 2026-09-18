@@ -22,7 +22,7 @@ export function parseMarketCap(value: string): number {
 
 export function formatSignedChange(value: number): string {
   const sign = value >= 0 ? "+" : "-";
-  return `${sign}${Math.abs(value).toLocaleString("en-US", {
+  return `${sign}$${Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
