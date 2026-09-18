@@ -85,23 +85,24 @@ export function StockList() {
                 const usdToCad = 1 / store.cadToUsdRate.value;
                 const fxMultiplier = isDisplayCad ? usdToCad : 1;
 
-                const positionsValueUsd = store.positions.value.reduce((acc, pos) => {
+                const positionsValueDb = store.positions.value.reduce((acc, pos) => {
                   const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
                   const isCad = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
                   const price = stock?.price || pos.average_cost;
                   
-                  const normalizedPriceUsd = isCad ? price * store.cadToUsdRate.value : price;
-                  return acc + (normalizedPriceUsd * pos.quantity);
+                  // Convert price to DB base (CAD)
+                  const normalizedPriceDb = isCad ? price : price * (1 / store.cadToUsdRate.value);
+                  return acc + (normalizedPriceDb * pos.quantity);
                 }, 0);
                 
-                const totalValueUsd = store.cashBalance.value + positionsValueUsd;
-                const totalValueDisplay = totalValueUsd * fxMultiplier;
+                const totalValueDb = store.cashBalance.value + positionsValueDb; // DB is CAD
+                const totalValueDisplay = isDisplayCad ? totalValueDb : totalValueDb * store.cadToUsdRate.value;
                 
-                const totalReturnUsd = totalValueUsd - 100000;
-                const totalReturnDisplay = totalReturnUsd * fxMultiplier;
-                const isPositive = totalReturnUsd >= 0;
+                const totalReturnDb = totalValueDb - 100000;
+                const totalReturnDisplay = isDisplayCad ? totalReturnDb : totalReturnDb * store.cadToUsdRate.value;
+                const isPositive = totalReturnDb >= 0;
 
-                const cashBalanceDisplay = store.cashBalance.value * fxMultiplier;
+                const cashBalanceDisplay = isDisplayCad ? store.cashBalance.value : store.cashBalance.value * store.cadToUsdRate.value;
 
                 return (
                   <>
@@ -121,9 +122,9 @@ export function StockList() {
                         onClick={() => store.displayCurrency.value = isDisplayCad ? "USD" : "CAD"}
                         class="flex items-center gap-1 rounded bg-zinc-900/80 px-2 py-1 text-[10px] font-bold text-zinc-400 ring-1 ring-zinc-800 transition hover:bg-zinc-800 hover:text-white"
                       >
-                        <span class={!isDisplayCad ? "text-violet-400" : ""}>USD</span>
-                        <span class="text-zinc-600">|</span>
                         <span class={isDisplayCad ? "text-violet-400" : ""}>CAD</span>
+                        <span class="text-zinc-600">|</span>
+                        <span class={!isDisplayCad ? "text-violet-400" : ""}>USD</span>
                       </button>
                     </div>
                     
@@ -175,22 +176,22 @@ export function StockList() {
                   const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
                   const isCadStock = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
                   
-                  // DB average_cost is always in USD. Convert to native for display.
-                  const avgCostUsd = pos.average_cost;
-                  const avgCostNative = isCadStock ? avgCostUsd * (1 / store.cadToUsdRate.value) : avgCostUsd;
+                  // DB average_cost is always in CAD. Convert to native for display.
+                  const avgCostDb = pos.average_cost;
+                  const avgCostNative = isCadStock ? avgCostDb : avgCostDb * store.cadToUsdRate.value;
                   
                   const currentPriceNative = stock?.price || avgCostNative;
-                  const currentPriceUsd = isCadStock ? currentPriceNative * store.cadToUsdRate.value : currentPriceNative;
+                  const currentPriceDb = isCadStock ? currentPriceNative : currentPriceNative * (1 / store.cadToUsdRate.value);
                   
                   // Position Total Value in the TOGGLED Display Currency
-                  const totalValueUsd = currentPriceUsd * pos.quantity;
-                  const totalValueDisplay = totalValueUsd * (isDisplayCad ? (1 / store.cadToUsdRate.value) : 1);
+                  const totalValueDb = currentPriceDb * pos.quantity;
+                  const totalValueDisplay = isDisplayCad ? totalValueDb : totalValueDb * store.cadToUsdRate.value;
                   
                   // Profit/Loss
-                  const profitLossNative = (currentPriceNative - avgCostNative) * pos.quantity;
-                  const profitLossDisplay = profitLossNative * (isDisplayCad ? (1 / store.cadToUsdRate.value) : 1);
-                  const profitLossPct = ((currentPriceNative - avgCostNative) / avgCostNative) * 100;
-                  const isPositive = profitLossNative >= 0;
+                  const profitLossDb = (currentPriceDb - avgCostDb) * pos.quantity;
+                  const profitLossDisplay = isDisplayCad ? profitLossDb : profitLossDb * store.cadToUsdRate.value;
+                  const profitLossPct = ((currentPriceDb - avgCostDb) / avgCostDb) * 100;
+                  const isPositive = profitLossDb >= 0;
                   const selected = store.isSelected(pos.symbol);
 
                   const displayCurrencyLabel = isDisplayCad ? "CAD" : "USD";

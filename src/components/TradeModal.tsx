@@ -21,12 +21,13 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
 
   const isDisplayCad = store.displayCurrency.value === "CAD";
   const usdToCad = 1 / store.cadToUsdRate.value;
-  const fxMultiplier = isDisplayCad ? usdToCad : 1;
   const currencyLabel = isDisplayCad ? "CAD" : "USD";
 
   const isCadStock = stock.currency === "CAD" || stock.symbol.endsWith(".TO");
-  // 1. Calculate USD normalized price (always sent to database)
-  const normalizedPriceUsd = isCadStock ? stock.price * store.cadToUsdRate.value : stock.price;
+  
+  // 1. Calculate CAD normalized price (always sent to database since DB base is now CAD)
+  const normalizedPriceDb = isCadStock ? stock.price : stock.price * usdToCad;
+  
   // 2. Calculate display price based on user toggle
   const displayPrice = isDisplayCad 
     ? (isCadStock ? stock.price : stock.price * usdToCad)
@@ -35,9 +36,9 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
   const numShares = parseInt(shares) || 0;
   const estimatedTotalDisplay = numShares * displayPrice;
 
-  // DB logic uses USD
-  const userCashUsd = store.cashBalance.value;
-  const userCashDisplay = userCashUsd * fxMultiplier;
+  // DB logic uses CAD
+  const userCashDb = store.cashBalance.value; // Now in CAD
+  const userCashDisplay = isDisplayCad ? userCashDb : userCashDb * store.cadToUsdRate.value;
 
   const currentPosition = store.positions.value.find(p => p.symbol === stock.symbol);
   const ownedShares = currentPosition?.quantity || 0;
@@ -57,7 +58,7 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
         symbol: stock.symbol,
         trade_type: tradeType,
         quantity: numShares,
-        price: normalizedPriceUsd, // ALWAYS send USD to database
+        price: normalizedPriceDb, // ALWAYS send CAD to database
       });
 
       if (error) {
@@ -133,7 +134,7 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
                 type="button"
                 onClick={() => {
                   if (tradeType === "BUY") {
-                    const maxBuy = Math.floor(userCashUsd / (normalizedPriceUsd || 0.01));
+                    const maxBuy = Math.floor(userCashDb / (normalizedPriceDb || 0.01));
                     setShares(Math.max(0, maxBuy).toString());
                   } else {
                     setShares(Math.max(0, ownedShares).toString());

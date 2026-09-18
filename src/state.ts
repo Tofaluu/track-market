@@ -129,7 +129,7 @@ class StockStore {
   cashBalance = signal<number>(this.initialPortfolio.cashBalance);
   positions = signal<Position[]>(this.initialPortfolio.positions);
   activeTab = signal<"watchlist" | "portfolio">(this.initialUi.activeTab || "watchlist");
-  displayCurrency = signal<"USD" | "CAD">(this.initialUi.displayCurrency || "USD");
+  displayCurrency = signal<"CAD" | "USD">(this.initialUi.displayCurrency || "CAD");
   cadToUsdRate = signal<number>(0.74); // Fallback rate
 
   // Global Toast
