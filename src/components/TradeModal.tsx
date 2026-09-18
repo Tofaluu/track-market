@@ -19,12 +19,29 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const numShares = parseInt(shares) || 0;
-  const estimatedTotal = numShares * stock.price;
+  const isDisplayCad = store.displayCurrency.value === "CAD";
+  const usdToCad = 1 / store.cadToUsdRate.value;
+  const fxMultiplier = isDisplayCad ? usdToCad : 1;
+  const currencyLabel = isDisplayCad ? "CAD" : "USD";
 
-  const userCash = store.cashBalance.value;
+  const isCadStock = stock.currency === "CAD" || stock.symbol.endsWith(".TO");
+  // 1. Calculate USD normalized price (always sent to database)
+  const normalizedPriceUsd = isCadStock ? stock.price * store.cadToUsdRate.value : stock.price;
+  // 2. Calculate display price based on user toggle
+  const displayPrice = isDisplayCad 
+    ? (isCadStock ? stock.price : stock.price * usdToCad)
+    : (isCadStock ? stock.price * store.cadToUsdRate.value : stock.price);
+
+  const numShares = parseInt(shares) || 0;
+  const estimatedTotalDisplay = numShares * displayPrice;
+
+  // DB logic uses USD
+  const userCashUsd = store.cashBalance.value;
+  const userCashDisplay = userCashUsd * fxMultiplier;
+
   const currentPosition = store.positions.value.find(p => p.symbol === stock.symbol);
   const ownedShares = currentPosition?.quantity || 0;
+  const ownedSharesValueDisplay = ownedShares * displayPrice;
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -40,7 +57,7 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
         symbol: stock.symbol,
         trade_type: tradeType,
         quantity: numShares,
-        price: stock.price,
+        price: normalizedPriceUsd, // ALWAYS send USD to database
       });
 
       if (error) {
@@ -122,24 +139,24 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
 
           <div class="rounded-xl bg-zinc-950/50 p-4 border border-zinc-800/50 space-y-3">
             <div class="flex justify-between text-sm">
-              <span class="text-zinc-400">Market Price</span>
-              <span class="font-medium text-white">{formatPrice(stock.price)}</span>
+              <span class="text-zinc-400">Market Price ({currencyLabel})</span>
+              <span class="font-medium text-white">{formatPrice(displayPrice)}</span>
             </div>
             <div class="flex justify-between text-sm">
-              <span class="text-zinc-400">Estimated Total</span>
-              <span class="font-bold text-white">{formatPrice(estimatedTotal)}</span>
+              <span class="text-zinc-400">Estimated Total ({currencyLabel})</span>
+              <span class="font-bold text-white">{formatPrice(estimatedTotalDisplay)}</span>
             </div>
             
             <div class="my-3 h-px w-full bg-zinc-800/50" />
             
             <div class="flex justify-between text-xs">
               <span class="text-zinc-500">Available Cash</span>
-              <span class="font-medium text-zinc-300">${userCash.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              <span class="font-medium text-zinc-300">${userCashDisplay.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
             <div class="flex justify-between text-xs mt-1.5">
               <span class="text-zinc-500">Shares Owned</span>
               <span class="font-medium text-zinc-300">
-                {ownedShares} ({formatPrice(ownedShares * stock.price)})
+                {ownedShares} ({formatPrice(ownedSharesValueDisplay)})
               </span>
             </div>
           </div>

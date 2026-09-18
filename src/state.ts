@@ -129,6 +129,8 @@ class StockStore {
   cashBalance = signal<number>(this.initialPortfolio.cashBalance);
   positions = signal<Position[]>(this.initialPortfolio.positions);
   activeTab = signal<"watchlist" | "portfolio">(this.initialUi.activeTab || "watchlist");
+  displayCurrency = signal<"USD" | "CAD">(this.initialUi.displayCurrency || "USD");
+  cadToUsdRate = signal<number>(0.74); // Fallback rate
 
   // Global Toast
   toastMessage = signal<string | null>(null);
@@ -146,6 +148,9 @@ class StockStore {
   private historyVersion = signal(0);
 
   constructor() {
+    // Fetch live FX rate
+    this.fetchFxRate();
+
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       this.session.value = session;
@@ -176,6 +181,7 @@ class StockStore {
         localStorage.setItem(UI_STATE_KEY, JSON.stringify({
           selectedSymbols: Array.from(this.selectedSymbols.value),
           activeTab: this.activeTab.value,
+          displayCurrency: this.displayCurrency.value,
           viewMode: this.viewMode.value,
           chartTimeframe: this.chartTimeframe.value,
           lastMarketUpdate: this.lastMarketUpdate.value,
@@ -216,6 +222,17 @@ class StockStore {
       
     if (positions) {
       this.positions.value = positions as Position[];
+    }
+  }
+
+  async fetchFxRate() {
+    try {
+      const quote = await fetchYahooFinanceQuote("CADUSD=X");
+      if (quote && quote.price) {
+        this.cadToUsdRate.value = quote.price;
+      }
+    } catch {
+      console.warn("Failed to fetch live CAD/USD rate. Using fallback.");
     }
   }
 
