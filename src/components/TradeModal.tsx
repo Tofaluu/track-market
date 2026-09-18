@@ -128,13 +128,29 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
 
           <div class="flex items-center justify-between">
             <label class="text-sm font-semibold text-zinc-300">Shares</label>
-            <input
-              type="number"
-              min="1"
-              value={shares}
-              onInput={(e) => setShares((e.target as HTMLInputElement).value)}
-              class="w-24 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-center text-lg font-bold text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-            />
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (tradeType === "BUY") {
+                    const maxBuy = Math.floor(userCashUsd / (normalizedPriceUsd || 0.01));
+                    setShares(Math.max(0, maxBuy).toString());
+                  } else {
+                    setShares(Math.max(0, ownedShares).toString());
+                  }
+                }}
+                class="rounded bg-violet-600/20 px-2 py-1 text-[10px] font-bold text-violet-400 hover:bg-violet-600/30 transition ring-1 ring-violet-500/30"
+              >
+                MAX
+              </button>
+              <input
+                type="number"
+                min="1"
+                value={shares}
+                onInput={(e) => setShares((e.target as HTMLInputElement).value)}
+                class="w-24 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-center text-lg font-bold text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+            </div>
           </div>
 
           <div class="rounded-xl bg-zinc-950/50 p-4 border border-zinc-800/50 space-y-3">
