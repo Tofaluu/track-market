@@ -87,9 +87,10 @@ export function StockList() {
                   const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
                   const isCad = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
                   const price = stock?.price || pos.average_cost;
-                  
-                  // Convert price to DB base (CAD)
-                  const normalizedPriceDb = isCad ? price : price * (1 / store.cadToUsdRate.value);
+                  // Convert price to DB base (CAD) and strictly round to 2 decimals
+                  // to prevent floating-point "arbitrage" against the database's rounded ledger
+                  const rawNormalizedPriceDb = isCad ? price : price * (1 / store.cadToUsdRate.value);
+                  const normalizedPriceDb = parseFloat(rawNormalizedPriceDb.toFixed(2));
                   return acc + (normalizedPriceDb * pos.quantity);
                 }, 0);
                 
@@ -179,7 +180,8 @@ export function StockList() {
                   const avgCostNative = isCadStock ? avgCostDb : avgCostDb * store.cadToUsdRate.value;
                   
                   const currentPriceNative = stock?.price || avgCostNative;
-                  const currentPriceDb = isCadStock ? currentPriceNative : currentPriceNative * (1 / store.cadToUsdRate.value);
+                  const rawCurrentPriceDb = isCadStock ? currentPriceNative : currentPriceNative * (1 / store.cadToUsdRate.value);
+                  const currentPriceDb = parseFloat(rawCurrentPriceDb.toFixed(2));
                   
                   // Position Total Value in the TOGGLED Display Currency
                   const totalValueDb = currentPriceDb * pos.quantity;

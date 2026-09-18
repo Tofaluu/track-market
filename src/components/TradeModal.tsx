@@ -26,7 +26,8 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
   const isCadStock = stock.currency === "CAD" || stock.symbol.endsWith(".TO");
   
   // 1. Calculate CAD normalized price (always sent to database since DB base is now CAD)
-  const normalizedPriceDb = isCadStock ? stock.price : stock.price * usdToCad;
+  const rawNormalizedPriceDb = isCadStock ? stock.price : stock.price * usdToCad;
+  const normalizedPriceDb = parseFloat(rawNormalizedPriceDb.toFixed(2));
   
   // 2. Calculate display price based on user toggle
   const displayPrice = isDisplayCad 
