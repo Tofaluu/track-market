@@ -49,17 +49,14 @@ export function AuthModal() {
         }
 
         if (!isEmail) {
-          // Attempt to lookup email by username
-          const { data, error: lookupError } = await supabase
-            .from("profiles")
-            .select("email")
-            .ilike("username", identifier)
-            .maybeSingle();
+          // Attempt to lookup email by username using a secure RPC function
+          const { data: lookedUpEmail, error: lookupError } = await supabase
+            .rpc("get_email_by_username", { p_username: identifier });
             
-          if (lookupError || !data || !data.email) {
+          if (lookupError || !lookedUpEmail) {
             throw new Error("Username not found or email lookup failed.");
           }
-          loginEmail = data.email;
+          loginEmail = lookedUpEmail;
         }
 
         const { error } = await supabase.auth.signInWithPassword({
