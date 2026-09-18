@@ -110,7 +110,7 @@ export function StockList() {
                           Total Account Value
                         </div>
                         <div class="text-2xl font-black text-white tabular-nums">
-                          ${totalValueDisplay.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatPrice(totalValueDisplay)}
                         </div>
                       </div>
                       
@@ -129,12 +129,12 @@ export function StockList() {
                     <div class="flex items-center gap-4 border-t border-violet-500/20 pt-3">
                       <div class="flex-1">
                         <div class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">Available Cash</div>
-                        <div class="text-sm font-semibold text-white tabular-nums">${cashBalanceDisplay.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div class="text-sm font-semibold text-white tabular-nums">{formatPrice(cashBalanceDisplay)}</div>
                       </div>
                       <div class="flex-1">
                         <div class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">All-Time Return</div>
                         <div class={`text-sm font-bold tabular-nums ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
-                          {isPositive ? "+" : "-"}${Math.abs(totalReturnDisplay).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {formatSignedChange(totalReturnDisplay)}
                         </div>
                       </div>
                     </div>
@@ -219,7 +219,7 @@ export function StockList() {
                         <div class="text-right flex items-center gap-1 justify-end">
                           <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
                           <span class="text-xs font-bold tabular-nums text-white">
-                            ${totalValueDisplay.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            {formatPrice(totalValueDisplay)}
                           </span>
                         </div>
                       </div>

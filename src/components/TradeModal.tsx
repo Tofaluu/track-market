@@ -168,7 +168,7 @@ export function TradeModal({ isOpen, onClose }: TradeModalProps) {
             
             <div class="flex justify-between text-xs">
               <span class="text-zinc-500">Available Cash</span>
-              <span class="font-medium text-zinc-300">${userCashDisplay.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              <span class="font-medium text-zinc-300">{formatPrice(userCashDisplay)}</span>
             </div>
             <div class="flex justify-between text-xs mt-1.5">
               <span class="text-zinc-500">Shares Owned</span>
