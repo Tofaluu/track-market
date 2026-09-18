@@ -82,7 +82,6 @@ export function StockList() {
             <div class="rounded-xl bg-violet-600/10 border border-violet-500/20 p-4 space-y-3">
               {(() => {
                 const isDisplayCad = store.displayCurrency.value === "CAD";
-                const usdToCad = 1 / store.cadToUsdRate.value;
 
                 const positionsValueDb = store.positions.value.reduce((acc, pos) => {
                   const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
