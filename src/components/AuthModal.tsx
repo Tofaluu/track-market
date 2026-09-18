@@ -6,8 +6,7 @@ export function AuthModal() {
   const isOpen = store.isAuthModalOpen.value;
 
   const [isLogin, setIsLogin] = useState(true);
-  // Reusing the email state as the identifier for login
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -17,7 +16,7 @@ export function AuthModal() {
 
   useEffect(() => {
     if (!isOpen) {
-      setIdentifier("");
+      setEmail("");
       setUsername("");
       setPassword("");
       setConfirmPassword("");
@@ -41,32 +40,18 @@ export function AuthModal() {
 
     try {
       if (isLogin) {
-        const isEmail = identifier.includes("@");
-        let loginEmail = identifier;
-
-        if (isEmail && !isValidEmail(identifier)) {
+        if (!isValidEmail(email)) {
           throw new Error("Please enter a valid email address.");
         }
 
-        if (!isEmail) {
-          // Attempt to lookup email by username using a secure RPC function
-          const { data: lookedUpEmail, error: lookupError } = await supabase
-            .rpc("get_email_by_username", { p_username: identifier });
-            
-          if (lookupError || !lookedUpEmail) {
-            throw new Error("Username not found or email lookup failed.");
-          }
-          loginEmail = lookedUpEmail;
-        }
-
         const { error } = await supabase.auth.signInWithPassword({
-          email: loginEmail,
+          email,
           password,
         });
         if (error) throw error;
         store.isAuthModalOpen.value = false;
       } else {
-        if (!isValidEmail(identifier)) {
+        if (!isValidEmail(email)) {
           throw new Error("Please enter a valid email address.");
         }
         if (password !== confirmPassword) {
@@ -95,7 +80,7 @@ export function AuthModal() {
         }
 
         const { error } = await supabase.auth.signUp({
-          email: identifier,
+          email,
           password,
           options: {
             data: {
@@ -166,14 +151,14 @@ export function AuthModal() {
           )}
           <div>
             <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-              {isLogin ? "Email or Username" : "Email"}
+              Email
             </label>
             <input
-              type={isLogin && !identifier.includes("@") ? "text" : "email"}
+              type="email"
               required
-              value={identifier}
-              onInput={(e) => setIdentifier((e.target as HTMLInputElement).value)}
-              placeholder={isLogin ? "investor@example.com or Username" : "investor@example.com"}
+              value={email}
+              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+              placeholder="investor@example.com"
               class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
             />
           </div>
