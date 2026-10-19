@@ -4,7 +4,7 @@ A fast, client-side financial market analytics dashboard and equity research ter
 
 Built with **Preact**, **@preact/signals**, **TypeScript**, **Tailwind CSS v4**, and **Google Gemini 3.8 Flash**.
 
-[Live Demo](https://trackmarket.dev)
+[Live App](https://trackmarket.dev)
 
 ---
 
