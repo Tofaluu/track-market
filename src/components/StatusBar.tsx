@@ -23,9 +23,10 @@ export function StatusBar() {
       {/* Selected Stock Live Indicator */}
       <div class="flex items-center gap-2">
         {selected ? (
-          <div class="flex items-center gap-1.5 font-medium">
-            <span class="text-zinc-200">{selected.name}</span>
-            <span class="text-zinc-500">({selected.symbol})</span>
+          <div class="flex items-center gap-1.5 whitespace-nowrap font-medium">
+            <span class="hidden text-zinc-200 sm:inline">{selected.name}</span>
+            <span class="hidden text-zinc-500 sm:inline">({selected.symbol})</span>
+            <span class="text-zinc-200 sm:hidden">{selected.symbol}</span>
             <span class="text-white font-semibold tabular-nums">{formatPrice(selected.price)}</span>
             <span
               class={`tabular-nums ${
@@ -82,7 +83,7 @@ export function StatusBar() {
       </div>
 
       {/* Portfolio Status Label */}
-      <div class="font-medium text-zinc-400">{store.statusLabel.value}</div>
+      <div class="shrink-0 whitespace-nowrap font-medium text-zinc-400">{store.statusLabel.value}</div>
     </footer>
   );
 }

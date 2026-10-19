@@ -21,9 +21,9 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
 
   return (
     <>
-      <header class="relative z-20 flex h-14 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-900/90 px-4 backdrop-blur-md">
+      <header class="relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-zinc-800 bg-zinc-900/90 px-3 backdrop-blur-md md:px-4">
         {/* Brand & Market Status */}
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 md:gap-3">
           <div class="flex items-center gap-2">
             <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30">
               <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
@@ -33,7 +33,7 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
             <span class="text-base font-bold tracking-tight text-white">{APP_TITLE}</span>
           </div>
 
-          <div class="h-4 w-[1px] bg-zinc-800" />
+          <div class="hidden h-4 w-[1px] bg-zinc-800 md:block" />
 
           {/* Market Status (Open vs Closed) */}
           <div class="flex items-center gap-2">
@@ -59,15 +59,15 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
                   }`}
                 />
               </span>
-              <span>{store.isMarketOpen.value ? "MARKET OPEN" : "MARKET CLOSED"}</span>
+              <span class="hidden sm:inline">{store.isMarketOpen.value ? "MARKET OPEN" : "MARKET CLOSED"}</span>
             </div>
           </div>
         </div>
 
         {/* Middle & Right Controls */}
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-1.5 md:gap-2">
           {/* Undo / Redo buttons */}
-          <div class="flex items-center rounded-lg border border-zinc-800 bg-zinc-950/60 p-0.5">
+          <div class="hidden items-center rounded-lg md:flex border border-zinc-800 bg-zinc-950/60 p-0.5">
             <button
               type="button"
               onClick={onUndo}
@@ -88,7 +88,7 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
             </button>
           </div>
 
-          <div class="h-4 w-[1px] bg-zinc-800" />
+          <div class="hidden h-4 w-[1px] bg-zinc-800 md:block" />
 
           {/* Add Stock & Delete Action Buttons */}
           <div class="flex items-center gap-1.5">
@@ -97,12 +97,13 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
               onClick={() => store.isAddModalOpen.value = true}
               disabled={!store.canAdd.value}
               title="Search & add any stock from global directory"
-              class="flex h-7 items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-600/15 px-3 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
+              aria-label="Add stock"
+              class="flex h-7 items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-600/15 px-2 md:px-3 text-xs font-semibold text-emerald-300 shadow-sm transition hover:bg-emerald-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
             >
               <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 4v16m8-8H4" />
               </svg>
-              <span>Add Stock</span>
+              <span class="hidden md:inline">Add Stock</span>
             </button>
 
             <button
@@ -114,12 +115,13 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
                   ? "Cannot remove active positions from watchlist. Sell shares first."
                   : "Delete selected stocks (Delete key)"
               }
-              class="flex h-7 items-center gap-1.5 rounded-lg border border-rose-600/40 bg-rose-600/15 px-3 text-xs font-semibold text-rose-300 shadow-sm transition hover:bg-rose-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
+              aria-label="Delete selected stocks"
+              class="flex h-7 items-center gap-1.5 rounded-lg border border-rose-600/40 bg-rose-600/15 px-2 md:px-3 text-xs font-semibold text-rose-300 shadow-sm transition hover:bg-rose-600/25 hover:text-white disabled:cursor-not-allowed disabled:border-zinc-800 disabled:bg-zinc-900 disabled:text-zinc-600"
             >
               <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
-              <span>Delete</span>
+              <span class="hidden md:inline">Delete</span>
               {selectedCount > 1 && (
                 <span class="rounded bg-rose-500/30 px-1.5 py-0.2 text-[10px] font-bold text-rose-200">
                   {selectedCount}
@@ -128,10 +130,10 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
             </button>
           </div>
 
-          <div class="h-4 w-[1px] bg-zinc-800" />
+          <div class="hidden h-4 w-[1px] bg-zinc-800 md:block" />
 
-          {/* View Mode Segmented Controls (Chart, AI Analyst) */}
-          <div class="flex items-center rounded-lg border border-zinc-800 bg-zinc-950/80 p-0.5">
+          {/* View Mode Segmented Controls (Chart, AI Analyst); phones use the buttons in the stock header */}
+          <div class="hidden items-center rounded-lg md:flex border border-zinc-800 bg-zinc-950/80 p-0.5">
             <button
               type="button"
               onClick={() => store.setViewMode("chart")}
@@ -170,6 +172,7 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
             type="button"
             onClick={() => setIsAiSettingsOpen(true)}
             title="Configure Gemini API Key"
+            aria-label="Configure Gemini API Key"
             class="flex h-7 w-7 items-center justify-center rounded-lg border border-zinc-800 bg-zinc-950 text-xs text-zinc-400 hover:border-zinc-700 hover:text-white transition"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -178,12 +181,12 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
             </svg>
           </button>
 
-          <div class="h-4 w-[1px] bg-zinc-800" />
+          <div class="hidden h-4 w-[1px] bg-zinc-800 md:block" />
 
           {/* User Auth */}
           {store.user.value ? (
             <div class="flex items-center gap-2">
-              <span class="text-xs font-medium text-zinc-400">
+              <span class="hidden text-xs font-medium text-zinc-400 sm:inline">
                 {store.user.value.user_metadata?.username || store.user.value.email?.split("@")[0]}
               </span>
               <button
