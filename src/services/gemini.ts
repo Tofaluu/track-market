@@ -59,7 +59,7 @@ export async function callGemini(
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
     throw new Error(
-      "Gemini API key is not configured. Please add your key in AI Settings."
+      "Add a Gemini API key in Settings first."
     );
   }
 
@@ -609,13 +609,13 @@ If this company or ticker does not exist on public exchanges, return:
   const raw = await callGemini(prompt, true);
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error(`Could not parse market search response for "${clean}".`);
+    throw new Error(`Gemini’s answer for “${clean}” couldn’t be read. Try again, or search by ticker.`);
   }
 
   try {
     const parsed = JSON.parse(jsonMatch[0]);
     if (!parsed.found || !parsed.symbol || typeof parsed.price !== "number") {
-      throw new Error(parsed.error || `Could not find a public stock or ETF matching "${clean}".`);
+      throw new Error(parsed.error || `No NYSE, NASDAQ or TSX listing found for “${clean}”.`);
     }
 
     const cleanSymbol = parsed.symbol.trim().toUpperCase();

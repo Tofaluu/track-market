@@ -1,29 +1,262 @@
+// Left rail: watchlist and paper-trading portfolio.
+import type { ComponentChildren } from "preact";
+import { memo } from "preact/compat";
 import { formatPercentChange, formatPrice, formatSignedChange } from "../format";
 import { store } from "../state";
+import type { Stock } from "../stocks";
+import { input, label, segment, segmented } from "./ui";
+
+const STARTING_CASH_CAD = 100_000;
+
+function ChangeText({ value, percent }: { value?: number; percent: number }) {
+  const up = (value ?? percent) >= 0;
+  return (
+    <span class={`tabular-nums ${up ? "text-up" : "text-down"}`}>
+      {value !== undefined && `${formatSignedChange(value)} `}
+      {value !== undefined ? `(${formatPercentChange(percent)})` : formatPercentChange(percent)}
+      <span aria-hidden="true"> {up ? "↑" : "↓"}</span>
+      <span class="sr-only">{up ? " up" : " down"}</span>
+    </span>
+  );
+}
+
+const rowClass = (selected: boolean) =>
+  `flex w-full flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-colors duration-150 ${
+    selected ? "bg-raised-hover" : "hover:bg-raised"
+  }`;
+
+// Memoized so a price tick only re-renders the rows whose quote changed.
+const WatchlistRow = memo(function WatchlistRow({ stock, selected }: { stock: Stock; selected: boolean }) {
+  const pending = stock.synced === false;
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={selected}
+        class={rowClass(selected)}
+        onClick={(event) => {
+          store.clickStock(stock.symbol, event.shiftKey);
+          event.stopPropagation();
+        }}
+      >
+        <div class="flex w-full items-baseline justify-between gap-3">
+          <span class="flex items-baseline gap-1.5">
+            <span class="text-sm font-semibold text-ink">{stock.symbol}</span>
+            <span class="text-2xs text-ink-subtle">{stock.currency || "USD"}</span>
+          </span>
+          {pending ? (
+            <span class="h-3.5 w-14 animate-pulse rounded bg-raised-hover" aria-label="Loading price" />
+          ) : (
+            <span class="text-sm font-medium tabular-nums text-ink">{formatPrice(stock.price)}</span>
+          )}
+        </div>
+        <div class="flex w-full items-baseline justify-between gap-3 text-xs">
+          <span class="truncate text-ink-muted">{stock.name}</span>
+          {pending ? <span class="text-ink-faint">—</span> : <ChangeText percent={stock.percentChange} />}
+        </div>
+      </button>
+    </li>
+  );
+});
+
+function EmptyNote({ children }: { children: ComponentChildren }) {
+  return <p class="px-3 py-6 text-center text-sm text-ink-muted">{children}</p>;
+}
+
+function PortfolioPanel() {
+  const isDisplayCad = store.displayCurrency.value === "CAD";
+  const rate = store.cadToUsdRate.value;
+  const toDisplay = (cad: number) => (isDisplayCad ? cad : cad * rate);
+  const currencyLabel = isDisplayCad ? "CAD" : "USD";
+
+  // Values are normalized to the CAD ledger and rounded to cents, matching the database,
+  // so sub-cent FX differences never show up as phantom profit.
+  const toLedgerCad = (price: number, isCad: boolean) => parseFloat((isCad ? price : price / rate).toFixed(2));
+
+  const positionsValueCad = store.positions.value.reduce((acc, pos) => {
+    const stock = store.stocks.value.find((s) => s.symbol === pos.symbol);
+    const isCad = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
+    return acc + toLedgerCad(stock?.price || pos.average_cost, isCad) * pos.quantity;
+  }, 0);
+  const totalCad = store.cashBalance.value + positionsValueCad;
+  const returnCad = totalCad - STARTING_CASH_CAD;
+
+  const query = store.searchQuery.value.trim().toLowerCase();
+  const positions = store.positions.value.filter((pos) => {
+    if (!query) return true;
+    const stock = store.stocks.value.find((s) => s.symbol === pos.symbol);
+    return pos.symbol.toLowerCase().includes(query) || stock?.name.toLowerCase().includes(query);
+  });
+  const subTab = store.portfolioSubTab.value;
+
+  return (
+    <div>
+      <section class="border-b border-line px-3 pb-4 pt-3" aria-label="Account summary">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class={label}>Account value</div>
+            <div class="mt-1 text-2xl font-semibold tabular-nums text-ink">{formatPrice(toDisplay(totalCad))}</div>
+          </div>
+          <div class={segmented} role="group" aria-label="Display currency">
+            {(["CAD", "USD"] as const).map((cur) => (
+              <button
+                key={cur}
+                type="button"
+                aria-pressed={store.displayCurrency.value === cur}
+                onClick={() => (store.displayCurrency.value = cur)}
+                class={`${segment(store.displayCurrency.value === cur)} h-6`}
+              >
+                {cur}
+              </button>
+            ))}
+          </div>
+        </div>
+        <dl class="mt-4 grid grid-cols-2 gap-3">
+          <div>
+            <dt class={label}>Cash</dt>
+            <dd class="mt-0.5 text-sm font-medium tabular-nums text-ink">{formatPrice(toDisplay(store.cashBalance.value))}</dd>
+          </div>
+          <div>
+            <dt class={label}>All-time return</dt>
+            <dd class="mt-0.5 text-sm font-medium">
+              <ChangeText value={toDisplay(returnCad)} percent={(returnCad / STARTING_CASH_CAD) * 100} />
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <div class="flex gap-4 px-3 pt-3" role="tablist" aria-label="Portfolio">
+        {(["positions", "history"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={subTab === tab}
+            onClick={() => (store.portfolioSubTab.value = tab)}
+            class={`border-b-2 pb-2 text-xs font-medium capitalize transition-colors ${
+              subTab === tab ? "border-ink text-ink" : "border-transparent text-ink-subtle hover:text-ink"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "positions" ? (
+        store.positions.value.length === 0 ? (
+          <EmptyNote>No positions yet. Open a stock and choose Trade to buy your first shares.</EmptyNote>
+        ) : positions.length === 0 ? (
+          <EmptyNote>No positions match “{store.searchQuery.value}”.</EmptyNote>
+        ) : (
+          <ul class="mt-1 space-y-0.5 px-1.5">
+            {positions.map((pos) => {
+              const stock = store.stocks.value.find((s) => s.symbol === pos.symbol);
+              const isCad = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
+              const avgCostNative = isCad ? pos.average_cost : pos.average_cost * rate;
+              const priceCad = toLedgerCad(stock?.price || avgCostNative, isCad);
+              const pnlCad = (priceCad - pos.average_cost) * pos.quantity;
+              const pnlPct = ((priceCad - pos.average_cost) / pos.average_cost) * 100;
+              const selected = store.isSelected(pos.symbol);
+              return (
+                <li key={pos.symbol}>
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    class={rowClass(selected)}
+                    onClick={(event) => {
+                      store.clickStock(pos.symbol, event.shiftKey);
+                      event.stopPropagation();
+                    }}
+                  >
+                    <div class="flex w-full items-baseline justify-between gap-3">
+                      <span class="flex items-baseline gap-1.5">
+                        <span class="text-sm font-semibold text-ink">{pos.symbol}</span>
+                        <span class="text-2xs text-ink-subtle">{pos.quantity} sh</span>
+                      </span>
+                      <span class="text-sm font-medium tabular-nums text-ink">
+                        {formatPrice(toDisplay(priceCad * pos.quantity))}
+                        <span class="ml-1 text-2xs font-normal text-ink-subtle">{currencyLabel}</span>
+                      </span>
+                    </div>
+                    <div class="flex w-full items-baseline justify-between gap-3 text-xs">
+                      <span class="truncate text-ink-muted">
+                        Avg {formatPrice(avgCostNative)} {stock?.currency || (isCad ? "CAD" : "USD")}
+                      </span>
+                      <ChangeText value={toDisplay(pnlCad)} percent={pnlPct} />
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      ) : store.transactions.value.length === 0 ? (
+        <EmptyNote>No trades yet. Your buys and sells will be listed here.</EmptyNote>
+      ) : (
+        <ul class="mt-1 divide-y divide-line px-3">
+          {store.transactions.value.map((tx) => {
+            const isBuy = tx.trade_type === "BUY";
+            const price = toDisplay(tx.price);
+            const date = new Date(tx.created_at);
+            return (
+              <li key={tx.id} class="py-2.5">
+                <div class="flex items-baseline justify-between gap-3">
+                  <span class="flex items-baseline gap-2">
+                    <span class={`text-2xs font-semibold uppercase tracking-[0.06em] ${isBuy ? "text-up" : "text-down"}`}>
+                      {isBuy ? "Buy" : "Sell"}
+                    </span>
+                    <span class="text-sm font-semibold text-ink">{tx.symbol}</span>
+                  </span>
+                  <span class="text-sm font-medium tabular-nums text-ink">
+                    {formatPrice(tx.quantity * price)}
+                    <span class="ml-1 text-2xs font-normal text-ink-subtle">{currencyLabel}</span>
+                  </span>
+                </div>
+                <div class="mt-0.5 flex items-baseline justify-between gap-3 text-xs text-ink-muted">
+                  <span class="tabular-nums">
+                    {tx.quantity} sh @ {formatPrice(price)}
+                  </span>
+                  <time class="tabular-nums text-ink-subtle" dateTime={tx.created_at}>
+                    {date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })},{" "}
+                    {date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                  </time>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export function StockList() {
   const stocks = store.filteredStocks.value;
   const totalCount = store.stocks.value.length;
   const searchQuery = store.searchQuery.value;
+  const tab = store.activeTab.value;
+  const selectedSymbols = store.selectedSymbols.value;
 
   return (
-    <aside class={`flex h-full w-full md:w-[310px] shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 ${store.selectedStock.value ? 'hidden md:flex' : 'flex'}`}>
-      {/* Search & Watchlist Header */}
-      <div class="border-b border-zinc-850 p-3 bg-zinc-900/40">
-        <div class="mb-3 flex rounded-lg bg-zinc-950 p-1 ring-1 ring-zinc-800">
+    <aside
+      aria-label="Watchlist and portfolio"
+      class={`flex h-full w-full shrink-0 flex-col border-r border-line bg-canvas md:w-[300px] ${
+        store.selectedStock.value ? "hidden md:flex" : "flex"
+      }`}
+    >
+      <div class="space-y-2.5 border-b border-line p-3">
+        <div class={`${segmented} w-full`} role="group" aria-label="List">
           <button
             type="button"
+            aria-pressed={tab === "watchlist"}
             onClick={() => (store.activeTab.value = "watchlist")}
-            class={`flex-1 rounded-md py-1 text-xs font-semibold uppercase tracking-wider transition ${
-              store.activeTab.value === "watchlist"
-                ? "bg-zinc-800 text-white shadow"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
+            class={`${segment(tab === "watchlist")} h-7 flex-1`}
           >
             Watchlist
           </button>
           <button
             type="button"
+            aria-pressed={tab === "portfolio"}
             onClick={() => {
               if (store.user.value) {
                 store.activeTab.value = "portfolio";
@@ -32,356 +265,54 @@ export function StockList() {
                 store.isAuthModalOpen.value = true;
               }
             }}
-            class={`flex-1 rounded-md py-1 text-xs font-semibold uppercase tracking-wider transition ${
-              store.activeTab.value === "portfolio"
-                ? "bg-violet-600 text-white shadow"
-                : "text-zinc-500 hover:text-zinc-300"
-            }`}
+            class={`${segment(tab === "portfolio")} h-7 flex-1`}
           >
             Portfolio
           </button>
         </div>
 
-        {/* Live Filter Input */}
         <div class="relative">
+          <label for="list-filter" class="sr-only">
+            Filter by symbol or name
+          </label>
+          <svg class="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
           <input
-            type="text"
+            id="list-filter"
+            type="search"
             value={searchQuery}
             onInput={(e) => store.setSearchQuery((e.target as HTMLInputElement).value)}
-            placeholder="Search by symbol or name..."
-            class="w-full rounded-lg border border-zinc-800 bg-zinc-900/90 py-1.5 pl-8 pr-3 text-xs text-zinc-100 placeholder-zinc-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/30 transition"
+            placeholder="Filter by symbol or name"
+            class={`${input} h-8 pl-8 text-xs`}
           />
-          <svg
-            class="absolute left-2.5 top-2 h-3.5 w-3.5 text-zinc-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => store.setSearchQuery("")}
-              class="absolute right-2 top-2 text-zinc-500 hover:text-zinc-300 transition"
-            >
-              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Stock Cards List */}
-      <div class="flex-1 overflow-y-auto p-2 pb-6 space-y-1.5">
-        {store.activeTab.value === "portfolio" ? (
-          <div class="space-y-4">
-            <div class="rounded-xl bg-violet-600/10 border border-violet-500/20 p-4 space-y-3">
-              {(() => {
-                const isDisplayCad = store.displayCurrency.value === "CAD";
-
-                const positionsValueDb = store.positions.value.reduce((acc, pos) => {
-                  const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
-                  const isCad = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
-                  const price = stock?.price || pos.average_cost;
-                  // Convert price to DB base (CAD) and strictly round to 2 decimals
-                  // to prevent floating-point "arbitrage" against the database's rounded ledger
-                  const rawNormalizedPriceDb = isCad ? price : price * (1 / store.cadToUsdRate.value);
-                  const normalizedPriceDb = parseFloat(rawNormalizedPriceDb.toFixed(2));
-                  return acc + (normalizedPriceDb * pos.quantity);
-                }, 0);
-                
-                const totalValueDb = store.cashBalance.value + positionsValueDb; // DB is CAD
-                const totalValueDisplay = isDisplayCad ? totalValueDb : totalValueDb * store.cadToUsdRate.value;
-                
-                const totalReturnDb = totalValueDb - 100000;
-                const totalReturnDisplay = isDisplayCad ? totalReturnDb : totalReturnDb * store.cadToUsdRate.value;
-                const isPositive = totalReturnDb >= 0;
-
-                const cashBalanceDisplay = isDisplayCad ? store.cashBalance.value : store.cashBalance.value * store.cadToUsdRate.value;
-
-                return (
-                  <>
-                    <div class="flex items-start justify-between">
-                      <div>
-                        <div class="text-[10px] font-semibold text-violet-400 uppercase tracking-wider mb-1">
-                          Total Account Value
-                        </div>
-                        <div class="text-2xl font-black text-white tabular-nums">
-                          {formatPrice(totalValueDisplay)}
-                        </div>
-                      </div>
-                      
-                      {/* Currency Toggle */}
-                      <button
-                        type="button"
-                        onClick={() => store.displayCurrency.value = isDisplayCad ? "USD" : "CAD"}
-                        class="flex items-center gap-1 rounded bg-zinc-900/80 px-2 py-1 text-[10px] font-bold text-zinc-400 ring-1 ring-zinc-800 transition hover:bg-zinc-800 hover:text-white"
-                      >
-                        <span class={isDisplayCad ? "text-violet-400" : ""}>CAD</span>
-                        <span class="text-zinc-600">|</span>
-                        <span class={!isDisplayCad ? "text-violet-400" : ""}>USD</span>
-                      </button>
-                    </div>
-                    
-                    <div class="flex items-center gap-4 border-t border-violet-500/20 pt-3">
-                      <div class="flex-1">
-                        <div class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">Available Cash</div>
-                        <div class="text-sm font-semibold text-white tabular-nums">{formatPrice(cashBalanceDisplay)}</div>
-                      </div>
-                      <div class="flex-1">
-                        <div class="text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-0.5">All-Time Return</div>
-                        <div class={`text-sm font-bold tabular-nums ${isPositive ? "text-emerald-400" : "text-rose-400"}`}>
-                          {formatSignedChange(totalReturnDisplay)}
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-            
-            <div class="space-y-1.5">
-              <div class="flex items-center gap-4 border-b border-zinc-800/50 pb-2 mb-2 px-1">
-                <button 
-                  type="button"
-                  onClick={() => store.portfolioSubTab.value = "positions"}
-                  class={`text-xs font-semibold uppercase tracking-wider transition ${store.portfolioSubTab.value === 'positions' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  Positions
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => store.portfolioSubTab.value = "history"}
-                  class={`text-xs font-semibold uppercase tracking-wider transition ${store.portfolioSubTab.value === 'history' ? 'text-violet-400' : 'text-zinc-500 hover:text-zinc-300'}`}
-                >
-                  History
-                </button>
-              </div>
-              {store.portfolioSubTab.value === "positions" ? (() => {
-                const query = store.searchQuery.value.trim().toLowerCase();
-                const isDisplayCad = store.displayCurrency.value === "CAD";
-                const filteredPositions = store.positions.value.filter(pos => {
-                  if (!query) return true;
-                  const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
-                  return pos.symbol.toLowerCase().includes(query) || (stock && stock.name.toLowerCase().includes(query));
-                });
-                
-                if (store.positions.value.length === 0) {
-                  return (
-                    <div class="p-4 text-center text-xs text-zinc-500">
-                      You don't own any stocks yet. Click TRADE on a stock to buy shares.
-                    </div>
-                  );
-                }
-                
-                if (filteredPositions.length === 0) {
-                  return (
-                    <div class="p-4 text-center text-xs text-zinc-500">
-                      No positions match your search.
-                    </div>
-                  );
-                }
-
-                return filteredPositions.map(pos => {
-                  const stock = store.stocks.value.find(s => s.symbol === pos.symbol);
-                  const isCadStock = stock ? stock.currency === "CAD" : pos.symbol.endsWith(".TO");
-                  
-                  // DB average_cost is always in CAD. Convert to native for display.
-                  const avgCostDb = pos.average_cost;
-                  const avgCostNative = isCadStock ? avgCostDb : avgCostDb * store.cadToUsdRate.value;
-                  
-                  const currentPriceNative = stock?.price || avgCostNative;
-                  const rawCurrentPriceDb = isCadStock ? currentPriceNative : currentPriceNative * (1 / store.cadToUsdRate.value);
-                  const currentPriceDb = parseFloat(rawCurrentPriceDb.toFixed(2));
-                  
-                  // Position Total Value in the TOGGLED Display Currency
-                  const totalValueDb = currentPriceDb * pos.quantity;
-                  const totalValueDisplay = isDisplayCad ? totalValueDb : totalValueDb * store.cadToUsdRate.value;
-                  
-                  // Profit/Loss
-                  const profitLossDb = (currentPriceDb - avgCostDb) * pos.quantity;
-                  const profitLossDisplay = isDisplayCad ? profitLossDb : profitLossDb * store.cadToUsdRate.value;
-                  const profitLossPct = ((currentPriceDb - avgCostDb) / avgCostDb) * 100;
-                  const isPositive = profitLossDb >= 0;
-                  const selected = store.isSelected(pos.symbol);
-
-                  const displayCurrencyLabel = isDisplayCad ? "CAD" : "USD";
-                  const nativeCurrencyLabel = stock?.currency || (pos.symbol.endsWith(".TO") ? "CAD" : "USD");
-
-                  return (
-                    <button
-                      key={pos.symbol}
-                      type="button"
-                      class={`group relative flex w-full flex-col rounded-xl border p-2.5 text-left transition-all ${
-                        selected
-                          ? "border-emerald-500/50 bg-zinc-850/90 shadow-md ring-1 ring-emerald-500/20"
-                          : "border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-850/60"
-                      }`}
-                      onClick={(event) => {
-                        store.clickStock(pos.symbol, event.shiftKey);
-                        event.stopPropagation();
-                      }}
-                    >
-                      <div class="flex w-full items-center justify-between">
-                        <div class="flex items-center gap-1.5">
-                          <span class="font-bold tracking-tight text-white">{pos.symbol}</span>
-                          <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
-                            {pos.quantity} SHS
-                          </span>
-                        </div>
-                        <div class="text-right flex items-center gap-1 justify-end">
-                          <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
-                          <span class="text-xs font-bold tabular-nums text-white">
-                            {formatPrice(totalValueDisplay)}
-                          </span>
-                        </div>
-                      </div>
-                      <div class="mt-1.5 flex w-full items-center justify-between gap-2">
-                        <div class="flex items-center gap-1">
-                          <span class="text-[9px] font-medium text-zinc-500">{nativeCurrencyLabel}</span>
-                          <span class="truncate text-[11px] font-medium text-zinc-400">
-                            Avg: {formatPrice(avgCostNative)}
-                          </span>
-                        </div>
-                        <div class="shrink-0 flex items-center gap-1">
-                          <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
-                          <div class={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${isPositive ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
-                            <span>{formatSignedChange(profitLossDisplay)} ({formatPercentChange(profitLossPct)})</span>
-                            <span>{isPositive ? "↑" : "↓"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                });
-              })() : (() => {
-                if (store.transactions.value.length === 0) {
-                  return (
-                    <div class="p-4 text-center text-xs text-zinc-500">
-                      No trading history yet.
-                    </div>
-                  );
-                }
-
-                const isDisplayCad = store.displayCurrency.value === "CAD";
-                const displayCurrencyLabel = isDisplayCad ? "CAD" : "USD";
-                const usdToCad = 1 / store.cadToUsdRate.value;
-
-                return store.transactions.value.map(tx => {
-                  // tx.price is stored in CAD
-                  const displayPrice = isDisplayCad ? tx.price : tx.price * usdToCad;
-                  const totalDisplay = tx.quantity * displayPrice;
-                  
-                  const isBuy = tx.trade_type === "BUY";
-                  
-                  // Format date nicely
-                  const dateObj = new Date(tx.created_at);
-                  const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-                  const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-
-                  return (
-                    <div key={tx.id} class="flex w-full flex-col rounded-xl border border-zinc-800/80 bg-zinc-900/50 p-2.5 text-left mb-1.5">
-                      <div class="flex w-full items-center justify-between">
-                        <div class="flex items-center gap-2">
-                          <span class={`rounded px-1.5 py-0.5 text-[10px] font-bold ${isBuy ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400"}`}>
-                            {tx.trade_type}
-                          </span>
-                          <span class="font-bold tracking-tight text-white">{tx.symbol}</span>
-                        </div>
-                        <div class="text-right flex items-center gap-1">
-                          <span class="text-[9px] font-medium text-zinc-500">{displayCurrencyLabel}</span>
-                          <span class="text-xs font-bold tabular-nums text-white">
-                            {formatPrice(totalDisplay)}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div class="mt-2 flex w-full items-center justify-between">
-                        <div class="text-[11px] font-medium text-zinc-400">
-                          {tx.quantity} shares @ {formatPrice(displayPrice)}
-                        </div>
-                        <div class="text-[10px] font-medium text-zinc-500">
-                          {dateStr} • {timeStr}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                });
-              })()}
-            </div>
-          </div>
+      <div class="flex-1 overflow-y-auto pb-6">
+        {tab === "portfolio" ? (
+          <PortfolioPanel />
         ) : stocks.length === 0 ? (
-          <div class="p-6 text-center text-xs text-zinc-500">
-            {totalCount === 0
-              ? "Your watchlist is empty. Click '+ Add' to monitor stocks."
-              : "No stocks match your search."}
-          </div>
-        ) : (
-          stocks.map((stock) => {
-            const selected = store.isSelected(stock.symbol);
-            const isPositive = stock.change >= 0;
-
-            return (
+          totalCount === 0 ? (
+            <div class="px-4 py-8 text-center">
+              <p class="text-sm text-ink-soft">Your watchlist is empty.</p>
               <button
-                key={stock.symbol}
                 type="button"
-                class={`group relative flex w-full flex-col rounded-xl border p-2.5 text-left transition-all ${
-                  selected
-                    ? "border-emerald-500/50 bg-zinc-850/90 shadow-md ring-1 ring-emerald-500/20"
-                    : "border-zinc-800/80 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-850/60"
-                }`}
-                onClick={(event) => {
-                  store.clickStock(stock.symbol, event.shiftKey);
-                  event.stopPropagation();
-                }}
+                onClick={() => store.resetToStarterWatchlist()}
+                class="mt-2 text-xs text-ink-muted underline decoration-ink-faint underline-offset-[3px] hover:text-ink hover:decoration-ink"
               >
-                {/* Top Row: Symbol, Currency Badge & Current Price */}
-                <div class="flex w-full items-center justify-between">
-                  <div class="flex items-center gap-1.5">
-                    <span class="font-bold tracking-tight text-white">{stock.symbol}</span>
-                    <span class="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-semibold text-zinc-400">
-                      {stock.currency || "USD"}
-                    </span>
-                  </div>
-
-                  <div class="text-right">
-                    <span
-                      class={`text-xs font-bold tabular-nums ${
-                        isPositive ? "text-emerald-400" : "text-rose-400"
-                      }`}
-                    >
-                      {formatPrice(stock.price)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Bottom Row: Full Company Name & Performance Badge */}
-                <div class="mt-1.5 flex w-full items-center justify-between gap-2">
-                  <span class="truncate text-[11px] font-medium text-zinc-400">
-                    {stock.name}
-                  </span>
-
-                  <div class="shrink-0">
-                    <div
-                      class={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums ${
-                        isPositive
-                          ? "bg-emerald-500/10 text-emerald-400"
-                          : "bg-rose-500/10 text-rose-400"
-                      }`}
-                    >
-                      <span>{formatPercentChange(stock.percentChange)}</span>
-                      <span>{isPositive ? "↑" : "↓"}</span>
-                    </div>
-                  </div>
-                </div>
+                Restore the starter watchlist
               </button>
-            );
-          })
+            </div>
+          ) : (
+            <EmptyNote>No stocks match “{searchQuery}”.</EmptyNote>
+          )
+        ) : (
+          <ul class="space-y-0.5 p-1.5">
+            {stocks.map((stock) => (
+              <WatchlistRow key={stock.symbol} stock={stock} selected={selectedSymbols.has(stock.symbol)} />
+            ))}
+          </ul>
         )}
       </div>
     </aside>

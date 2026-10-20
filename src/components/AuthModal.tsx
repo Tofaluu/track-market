@@ -1,10 +1,40 @@
-import { useState, useEffect } from "preact/hooks";
+// Sign-in / create-account dialog for paper trading and watchlist sync.
+import type { JSX } from "preact";
+import { useState } from "preact/hooks";
 import { store } from "../state";
 import { supabase } from "../services/supabase";
+import { Dialog, DialogHeader } from "./Dialog";
+import { btn, input, size } from "./ui";
+
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export function AuthModal() {
-  const isOpen = store.isAuthModalOpen.value;
+  if (!store.isAuthModalOpen.value) return null;
+  return <AuthDialog />;
+}
 
+function Field({
+  id,
+  label,
+  hint,
+  ...inputProps
+}: { id: string; label: string; hint?: string } & JSX.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <div class="space-y-1.5">
+      <label for={id} class="block text-sm font-medium text-ink-soft">
+        {label}
+      </label>
+      <input id={id} aria-describedby={hint ? `${id}-hint` : undefined} class={`${input} h-9`} {...inputProps} />
+      {hint && (
+        <p id={`${id}-hint`} class="text-xs text-ink-subtle">
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AuthDialog() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
@@ -12,230 +42,148 @@ export function AuthModal() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
-  useEffect(() => {
-    if (!isOpen) {
-      setEmail("");
-      setUsername("");
-      setPassword("");
-      setConfirmPassword("");
-      setErrorMsg("");
-      setSuccessMsg("");
-      setIsLogin(true);
-      store.authModalIntent.value = null;
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  const isValidEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const close = () => {
+    store.isAuthModalOpen.value = false;
+    store.authModalIntent.value = null;
   };
 
   const handleAuthSuccess = () => {
-    store.isAuthModalOpen.value = false;
-    if (store.authModalIntent.value === "portfolio") {
-      store.activeTab.value = "portfolio";
-    }
+    const intent = store.authModalIntent.value;
+    close();
+    if (intent === "portfolio") store.activeTab.value = "portfolio";
   };
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setErrorMsg("");
-    setSuccessMsg("");
 
     try {
-      if (isLogin) {
-        if (!isValidEmail(email)) {
-          throw new Error("Please enter a valid email address.");
-        }
+      if (!isValidEmail(email)) throw new Error("Enter a valid email address, like name@example.com.");
 
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         handleAuthSuccess();
-      } else {
-        if (!isValidEmail(email)) {
-          throw new Error("Please enter a valid email address.");
-        }
-        if (password !== confirmPassword) {
-          throw new Error("Passwords do not match.");
-        }
-        const cleanUsername = username.trim();
-        if (!cleanUsername) {
-          throw new Error("Username is required.");
-        }
-        if (cleanUsername.length < 3) {
-          throw new Error("Username must be at least 3 characters long.");
-        }
-        if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
-          throw new Error("Username can only contain letters, numbers, and underscores.");
-        }
-
-        // Check if username is already taken
-        const { data: existingUser } = await supabase
-          .from("profiles")
-          .select("username")
-          .ilike("username", cleanUsername)
-          .maybeSingle();
-
-        if (existingUser) {
-          throw new Error("That username is already taken. Please choose another.");
-        }
-
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              username: cleanUsername,
-            },
-          },
-        });
-        if (error) throw error;
-        setSuccessMsg("Account created! You are now logged in.");
-        setTimeout(() => {
-          handleAuthSuccess();
-        }, 1500);
+        return;
       }
+
+      const cleanUsername = username.trim();
+      if (cleanUsername.length < 3) throw new Error("Usernames need at least 3 characters.");
+      if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+        throw new Error("Usernames can only use letters, numbers and underscores.");
+      }
+      if (password !== confirmPassword) throw new Error("The two passwords don’t match.");
+
+      const { data: existingUser } = await supabase
+        .from("profiles")
+        .select("username")
+        .ilike("username", cleanUsername)
+        .maybeSingle();
+      if (existingUser) throw new Error(`“${cleanUsername}” is taken. Try another username.`);
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { username: cleanUsername } },
+      });
+      if (error) throw error;
+      store.showToast(`Welcome, ${cleanUsername}. You have $100,000 CAD in paper money to trade.`);
+      handleAuthSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || "An error occurred.");
+      setErrorMsg(err?.message || "Something went wrong. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const intentCopy =
+    store.authModalIntent.value === "portfolio"
+      ? "Sign in to open your paper-trading portfolio."
+      : "Paper trade with $100,000 CAD and sync your watchlist.";
+
   return (
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in"
-      onClick={() => (store.isAuthModalOpen.value = false)}
-    >
-      <div
-        class="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 p-6 shadow-2xl ring-1 ring-white/10"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h3 class="text-lg font-bold text-white">
-              {isLogin ? "Sign In" : "Create Account"}
-            </h3>
-            <p class="text-xs text-zinc-400">
-              {isLogin
-                ? "Welcome back to TrackMarket"
-                : "Join to start paper trading"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => (store.isAuthModalOpen.value = false)}
-            class="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition"
-          >
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog onClose={close} labelledBy="auth-title" width="max-w-sm">
+      <DialogHeader
+        id="auth-title"
+        title={isLogin ? "Sign in" : "Create an account"}
+        description={intentCopy}
+        onClose={close}
+      />
 
-        <form onSubmit={handleSubmit} class="space-y-4">
-          {!isLogin && (
-            <div>
-              <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-                Username
-              </label>
-              <input
-                type="text"
-                required={!isLogin}
-                value={username}
-                onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
-                placeholder="WarrenBuffett99"
-                class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-              />
-            </div>
-          )}
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              value={email}
-              onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
-              placeholder="investor@example.com"
-              class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-            />
-          </div>
-          <div>
-            <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-              Password
-            </label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
-              placeholder="••••••••"
-              class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-            />
-          </div>
-          {!isLogin && (
-            <div>
-              <label class="mb-1.5 block text-xs font-semibold text-zinc-300">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                required={!isLogin}
-                minLength={6}
-                value={confirmPassword}
-                onInput={(e) => setConfirmPassword((e.target as HTMLInputElement).value)}
-                placeholder="••••••••"
-                class="w-full rounded-xl border border-zinc-700 bg-zinc-950 px-3.5 py-2.5 text-sm text-white placeholder-zinc-600 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40"
-              />
-            </div>
-          )}
+      <form onSubmit={handleSubmit} class="space-y-4 px-5 py-5" noValidate>
+        {!isLogin && (
+          <Field
+            id="auth-username"
+            label="Username"
+            hint="Letters, numbers and underscores, at least 3 characters."
+            type="text"
+            autocomplete="username"
+            required
+            value={username}
+            onInput={(e) => setUsername((e.target as HTMLInputElement).value)}
+          />
+        )}
+        <Field
+          id="auth-email"
+          label="Email"
+          type="email"
+          autocomplete="email"
+          required
+          data-autofocus
+          value={email}
+          onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
+        />
+        <Field
+          id="auth-password"
+          label="Password"
+          hint={isLogin ? undefined : "At least 6 characters."}
+          type="password"
+          autocomplete={isLogin ? "current-password" : "new-password"}
+          required
+          minLength={6}
+          value={password}
+          onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
+        />
+        {!isLogin && (
+          <Field
+            id="auth-confirm"
+            label="Confirm password"
+            type="password"
+            autocomplete="new-password"
+            required
+            minLength={6}
+            value={confirmPassword}
+            onInput={(e) => setConfirmPassword((e.target as HTMLInputElement).value)}
+          />
+        )}
 
-          {errorMsg && (
-            <div class="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20">
-              {errorMsg}
-            </div>
-          )}
-          {successMsg && (
-            <div class="rounded-lg bg-emerald-500/10 p-3 text-xs text-emerald-400 border border-emerald-500/20">
-              {successMsg}
-            </div>
-          )}
+        {errorMsg && (
+          <p role="alert" class="text-sm text-down">
+            {errorMsg}
+          </p>
+        )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            class="w-full rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-violet-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Please wait..." : isLogin ? "Sign In" : "Sign Up"}
-          </button>
-        </form>
+        <button type="submit" disabled={loading} class={`${btn.primary} ${size.lg} w-full`}>
+          {loading ? (isLogin ? "Signing in…" : "Creating account…") : isLogin ? "Sign in" : "Create account"}
+        </button>
 
-        <div class="mt-6 text-center text-xs text-zinc-400">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
+        <p class="text-center text-sm text-ink-muted">
+          {isLogin ? "New here? " : "Already have an account? "}
           <button
             type="button"
             onClick={() => {
               setIsLogin(!isLogin);
               setErrorMsg("");
-              setSuccessMsg("");
             }}
-            class="font-semibold text-violet-400 hover:text-violet-300 hover:underline"
+            class="font-medium text-ink underline decoration-ink-faint underline-offset-[3px] hover:decoration-ink"
           >
-            {isLogin ? "Create one" : "Sign in instead"}
+            {isLogin ? "Create an account" : "Sign in"}
           </button>
-        </div>
-      </div>
-    </div>
+        </p>
+      </form>
+    </Dialog>
   );
 }

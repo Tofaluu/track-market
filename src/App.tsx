@@ -37,7 +37,7 @@ export function App() {
             store.positions.value.some(p => p.symbol === sym && p.quantity > 0)
           );
           if (hasHeld) {
-            store.showToast("Cannot remove active positions from watchlist. Sell shares first.");
+            store.showToast("You hold shares in this stock. Sell them before removing it.");
             event.preventDefault();
             return;
           }
@@ -60,7 +60,7 @@ export function App() {
   }, []);
 
   return (
-    <main class="flex h-[100dvh] w-screen flex-col bg-zinc-950 text-zinc-100 antialiased select-none">
+    <main class="flex h-[100dvh] w-screen flex-col bg-canvas text-ink antialiased select-none">
       <Toolbar
         onDelete={() => store.deleteSelectedStocks()}
         onUndo={() => store.undo()}

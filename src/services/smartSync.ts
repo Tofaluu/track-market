@@ -146,6 +146,7 @@ export function initSmartCatchUpSync(): () => void {
   // 2. Check whenever user switches back to this tab/window
   const handleVisibilityChange = () => {
     if (document.visibilityState === "visible") {
+      store.refreshMarketStatus();
       checkAndTriggerCatchUpSync();
     }
   };
@@ -158,6 +159,7 @@ export function initSmartCatchUpSync(): () => void {
 
   // 3. Periodic check every 15 seconds while tab remains open
   const intervalId = setInterval(() => {
+    store.refreshMarketStatus();
     if (document.visibilityState === "visible") {
       checkAndTriggerCatchUpSync();
     }

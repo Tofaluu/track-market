@@ -1,7 +1,11 @@
+// Paper-trade dialog. Orders are inserted as transactions; a Postgres trigger settles them.
 import { useState } from "preact/hooks";
 import { store } from "../state";
 import { formatPrice } from "../format";
 import { supabase } from "../services/supabase";
+import type { Stock } from "../stocks";
+import { Dialog, DialogHeader } from "./Dialog";
+import { btn, input, segment, segmented, size } from "./ui";
 
 type TradeModalProps = {
   isOpen: boolean;
@@ -9,193 +13,152 @@ type TradeModalProps = {
 };
 
 export function TradeModal({ isOpen, onClose }: TradeModalProps) {
-  if (!isOpen) return null;
-
   const stock = store.selectedStock.value;
-  if (!stock) return null;
+  if (!isOpen || !stock) return null;
+  return <TradeDialog stock={stock} onClose={onClose} />;
+}
 
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div class="flex items-baseline justify-between gap-3">
+      <dt class="text-ink-muted">{label}</dt>
+      <dd class={`tabular-nums ${strong ? "font-semibold text-ink" : "text-ink-soft"}`}>{value}</dd>
+    </div>
+  );
+}
+
+function TradeDialog({ stock, onClose }: { stock: Stock; onClose: () => void }) {
   const [tradeType, setTradeType] = useState<"BUY" | "SELL">("BUY");
-  const [shares, setShares] = useState<string>("1");
+  const [shares, setShares] = useState("1");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const rate = store.cadToUsdRate.value;
   const isDisplayCad = store.displayCurrency.value === "CAD";
-  const usdToCad = 1 / store.cadToUsdRate.value;
   const currencyLabel = isDisplayCad ? "CAD" : "USD";
-
   const isCadStock = stock.currency === "CAD" || stock.symbol.endsWith(".TO");
-  
-  // 1. Calculate CAD normalized price (always sent to database since DB base is now CAD)
-  const rawNormalizedPriceDb = isCadStock ? stock.price : stock.price * usdToCad;
-  const normalizedPriceDb = parseFloat(rawNormalizedPriceDb.toFixed(2));
-  
-  // 2. Calculate display price based on user toggle
-  const displayPrice = isDisplayCad 
-    ? (isCadStock ? stock.price : stock.price * usdToCad)
-    : (isCadStock ? stock.price * store.cadToUsdRate.value : stock.price);
+  const priceAvailable = stock.synced !== false;
 
-  const numShares = parseInt(shares) || 0;
-  const estimatedTotalDisplay = numShares * displayPrice;
+  // The ledger is in CAD, rounded to cents, so the order price matches what the database stores.
+  const priceCad = parseFloat((isCadStock ? stock.price : stock.price / rate).toFixed(2));
+  const toDisplay = (cad: number) => (isDisplayCad ? cad : cad * rate);
 
-  // DB logic uses CAD
-  const userCashDb = store.cashBalance.value; // Now in CAD
-  const userCashDisplay = isDisplayCad ? userCashDb : userCashDb * store.cadToUsdRate.value;
-
-  const currentPosition = store.positions.value.find(p => p.symbol === stock.symbol);
-  const ownedShares = currentPosition?.quantity || 0;
-  const ownedSharesValueDisplay = ownedShares * displayPrice;
+  const numShares = Number.parseInt(shares, 10) || 0;
+  const cashCad = store.cashBalance.value;
+  const ownedShares = store.positions.value.find((p) => p.symbol === stock.symbol)?.quantity || 0;
+  const maxShares = tradeType === "BUY" ? Math.max(0, Math.floor(cashCad / (priceCad || 0.01))) : ownedShares;
+  const exceedsLimit = numShares > maxShares;
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
-    if (numShares <= 0) return;
-    if (!store.user.value) return;
-
+    if (numShares <= 0 || !store.user.value || loading || !priceAvailable) return;
     setLoading(true);
     setErrorMsg("");
-
     try {
       const { error } = await supabase.from("transactions").insert({
         user_id: store.user.value.id,
         symbol: stock.symbol,
         trade_type: tradeType,
         quantity: numShares,
-        price: normalizedPriceDb, // ALWAYS send CAD to database
+        price: priceCad,
       });
+      // The settlement trigger rejects orders the account can't cover
+      if (error) throw error;
 
-      if (error) {
-        // The PostgreSQL trigger will return an error message if they don't have enough cash/shares
-        throw error;
-      }
-
-      // Success! Reload their portfolio state from the database
       await store.loadSupabasePortfolio();
-      store.showToast(`Successfully ${tradeType === "BUY" ? "bought" : "sold"} ${numShares} shares of ${stock.symbol}!`);
+      store.showToast(
+        `${tradeType === "BUY" ? "Bought" : "Sold"} ${numShares} ${numShares === 1 ? "share" : "shares"} of ${stock.symbol}.`
+      );
       onClose();
-      setShares("1");
     } catch (err: any) {
-      setErrorMsg(err.message || "Trade failed.");
+      setErrorMsg(err?.message || "The order didn’t go through. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in"
-      onClick={onClose}
-    >
-      <div
-        class="w-full max-w-sm rounded-2xl border border-zinc-800 bg-zinc-900 shadow-2xl overflow-hidden ring-1 ring-white/10"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div class="border-b border-zinc-800 bg-zinc-950/50 p-4">
-          <div class="flex items-center justify-between">
-            <div>
-              <h3 class="text-lg font-bold text-white">Trade {stock.symbol}</h3>
-              <p class="text-xs text-zinc-400">{stock.name}</p>
-            </div>
+    <Dialog onClose={onClose} labelledBy="trade-title" width="max-w-sm">
+      <DialogHeader id="trade-title" title={`Trade ${stock.symbol}`} description={stock.name} onClose={onClose} />
+
+      <form onSubmit={handleSubmit} class="space-y-5 px-5 py-5">
+        <div class={`${segmented} w-full`} role="group" aria-label="Order side">
+          {(["BUY", "SELL"] as const).map((side) => (
             <button
-              onClick={onClose}
-              class="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-800 hover:text-zinc-300 transition"
+              key={side}
+              type="button"
+              aria-pressed={tradeType === side}
+              onClick={() => {
+                setTradeType(side);
+                setErrorMsg("");
+              }}
+              class={`${segment(tradeType === side)} h-8 flex-1 text-sm`}
             >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+              {side === "BUY" ? "Buy" : "Sell"}
             </button>
-          </div>
+          ))}
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} class="p-5 space-y-5">
-          {/* Buy/Sell Toggle */}
-          <div class="flex rounded-lg bg-zinc-950 p-1">
-            <button
-              type="button"
-              onClick={() => setTradeType("BUY")}
-              class={`flex-1 rounded-md py-1.5 text-sm font-semibold transition ${
-                tradeType === "BUY" ? "bg-emerald-600 text-white shadow" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              BUY
-            </button>
-            <button
-              type="button"
-              onClick={() => setTradeType("SELL")}
-              class={`flex-1 rounded-md py-1.5 text-sm font-semibold transition ${
-                tradeType === "SELL" ? "bg-rose-600 text-white shadow" : "text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              SELL
-            </button>
+        <div class="flex items-end justify-between gap-3">
+          <div class="space-y-1.5">
+            <label for="trade-shares" class="block text-sm font-medium text-ink-soft">
+              Shares
+            </label>
+            <input
+              id="trade-shares"
+              data-autofocus
+              type="number"
+              inputMode="numeric"
+              min="1"
+              step="1"
+              value={shares}
+              aria-describedby="trade-limit"
+              onInput={(e) => setShares((e.target as HTMLInputElement).value)}
+              class={`${input} h-10 w-32 text-base font-medium tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
+            />
           </div>
-
-          <div class="flex items-center justify-between">
-            <label class="text-sm font-semibold text-zinc-300">Shares</label>
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  if (tradeType === "BUY") {
-                    const maxBuy = Math.floor(userCashDb / (normalizedPriceDb || 0.01));
-                    setShares(Math.max(0, maxBuy).toString());
-                  } else {
-                    setShares(Math.max(0, ownedShares).toString());
-                  }
-                }}
-                class="rounded bg-violet-600/20 px-2 py-1 text-[10px] font-bold text-violet-400 hover:bg-violet-600/30 transition ring-1 ring-violet-500/30"
-              >
-                MAX
-              </button>
-              <input
-                type="number"
-                min="1"
-                value={shares}
-                onInput={(e) => setShares((e.target as HTMLInputElement).value)}
-                class="w-24 rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-1.5 text-center text-lg font-bold text-white focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500/40 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-          </div>
-
-          <div class="rounded-xl bg-zinc-950/50 p-4 border border-zinc-800/50 space-y-3">
-            <div class="flex justify-between text-sm">
-              <span class="text-zinc-400">Market Price ({currencyLabel})</span>
-              <span class="font-medium text-white">{formatPrice(displayPrice)}</span>
-            </div>
-            <div class="flex justify-between text-sm">
-              <span class="text-zinc-400">Estimated Total ({currencyLabel})</span>
-              <span class="font-bold text-white">{formatPrice(estimatedTotalDisplay)}</span>
-            </div>
-            
-            <div class="my-3 h-px w-full bg-zinc-800/50" />
-            
-            <div class="flex justify-between text-xs">
-              <span class="text-zinc-500">Available Cash</span>
-              <span class="font-medium text-zinc-300">{formatPrice(userCashDisplay)}</span>
-            </div>
-            <div class="flex justify-between text-xs mt-1.5">
-              <span class="text-zinc-500">Shares Owned</span>
-              <span class="font-medium text-zinc-300">
-                {ownedShares} ({formatPrice(ownedSharesValueDisplay)})
-              </span>
-            </div>
-          </div>
-
-          {errorMsg && (
-            <div class="rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20">
-              {errorMsg}
-            </div>
-          )}
-
           <button
-            type="submit"
-            disabled={loading || numShares <= 0}
-            class={`w-full rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition disabled:opacity-50 disabled:cursor-not-allowed ${
-              tradeType === "BUY" ? "bg-emerald-600 hover:bg-emerald-500" : "bg-rose-600 hover:bg-rose-500"
-            }`}
+            type="button"
+            onClick={() => setShares(String(maxShares))}
+            disabled={maxShares === 0}
+            class={`${btn.secondary} ${size.md} h-10`}
           >
-            {loading ? "Processing..." : `Submit ${tradeType} Order`}
+            Max ({maxShares})
           </button>
-        </form>
-      </div>
-    </div>
+        </div>
+        <p id="trade-limit" class="-mt-3 text-xs text-ink-subtle">
+          {tradeType === "BUY"
+            ? `Your cash covers up to ${maxShares} ${maxShares === 1 ? "share" : "shares"}.`
+            : `You own ${ownedShares} ${ownedShares === 1 ? "share" : "shares"}.`}
+        </p>
+
+        <dl class="space-y-2 rounded-lg border border-line bg-canvas px-4 py-3 text-sm">
+          <Row label={`Price (${currencyLabel})`} value={priceAvailable ? formatPrice(toDisplay(priceCad)) : "Waiting for quote"} />
+          <Row label={`Estimated total (${currencyLabel})`} value={formatPrice(toDisplay(priceCad * numShares))} strong />
+          <div class="border-t border-line pt-2" />
+          <Row label="Cash available" value={formatPrice(toDisplay(cashCad))} />
+          <Row label="Shares owned" value={String(ownedShares)} />
+        </dl>
+
+        {(errorMsg || exceedsLimit) && (
+          <p role="alert" class="text-sm text-down">
+            {errorMsg ||
+              (tradeType === "BUY"
+                ? "That’s more than your cash covers. Lower the number of shares."
+                : "You can’t sell more shares than you own.")}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || numShares <= 0 || exceedsLimit || !priceAvailable}
+          class={`${btn.primary} ${size.lg} w-full`}
+        >
+          {loading
+            ? "Placing order…"
+            : `${tradeType === "BUY" ? "Buy" : "Sell"} ${numShares > 0 ? numShares : ""} ${stock.symbol}`.replace(/\s+/g, " ")}
+        </button>
+      </form>
+    </Dialog>
   );
 }

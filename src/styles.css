@@ -1,7 +1,35 @@
 @import "tailwindcss";
 
+/* Design tokens. See DESIGN.md: neutrals carry the interface, and green and
+   red are reserved for price direction. */
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Type roles for a dense trading UI. Nothing renders below 11px. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --color-canvas: #0b0d10;
+  --color-surface: #12151a;
+  --color-raised: #1a1e24;
+  --color-raised-hover: #242932;
+  --color-line: #22262d;
+  --color-line-strong: #323840;
+
+  --color-ink: #eef0f3;
+  --color-ink-soft: #cbcfd6;
+  --color-ink-muted: #a5abb4;
+  --color-ink-subtle: #8d939d;
+  --color-ink-faint: #5c626c;
+
+  --color-up: #38c785;
+  --color-down: #f2606f;
+
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
 
@@ -11,75 +39,96 @@
 
 body {
   margin: 0;
-  background-color: #09090b;
-  color: #f4f4f5;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  caret-color: var(--color-ink);
 }
 
-/* Custom scrollbars for high-density fintech tables & lists */
+::selection {
+  background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  color: var(--color-ink);
+}
+
+/* One focus treatment for every control, shown for keyboard users only. */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: 1px solid var(--color-ink-muted);
+  outline-offset: 0;
+}
+
+/* The native clear button ignores the palette; Escape and select-all cover it. */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Scrollbars for dense lists */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181b;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: var(--color-line-strong);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: var(--color-ink-faint);
 }
 
-/* Real-time live price tick flash animations */
-.flash-up {
-  animation: flashUpAnim 0.75s ease-out;
-}
-
-.flash-down {
-  animation: flashDownAnim 0.75s ease-out;
-}
-
-@keyframes flashUpAnim {
-  0% {
-    background-color: rgba(16, 185, 129, 0.35);
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+/* Reduced motion: drop looping and travelling motion, keep state feedback. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-pulse {
+    animation: none;
   }
-  100% {
-    background-color: transparent;
-    box-shadow: none;
+  .animate-spin {
+    animation-duration: 2s;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
   }
 }
 
-@keyframes flashDownAnim {
-  0% {
-    background-color: rgba(244, 63, 94, 0.35);
-    box-shadow: 0 0 12px rgba(244, 63, 94, 0.4);
-  }
-  100% {
-    background-color: transparent;
-    box-shadow: none;
-  }
-}
-
-/* AI Markdown Report Typography */
+/* AI report typography */
 .ai-markdown {
-  color: #d4d4d8;
-  font-size: 0.8125rem;
-  line-height: 1.625;
+  color: var(--color-ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  max-width: 72ch;
+  text-wrap: pretty;
 }
 
 .ai-markdown h1,
 .ai-markdown h2,
 .ai-markdown h3,
 .ai-markdown h4 {
-  color: #f4f4f5;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-top: 1.25rem;
+  color: var(--color-ink);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  margin-top: 1.5rem;
   margin-bottom: 0.5rem;
+  text-wrap: balance;
+}
+
+.ai-markdown > :first-child {
+  margin-top: 0;
 }
 
 .ai-markdown h1 {
@@ -87,14 +136,13 @@ body {
 }
 
 .ai-markdown h2 {
-  font-size: 1.1rem;
-  border-bottom: 1px solid #27272a;
-  padding-bottom: 0.35rem;
+  font-size: 1.0625rem;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: 0.375rem;
 }
 
 .ai-markdown h3 {
-  font-size: 0.95rem;
-  color: #e4e4e7;
+  font-size: 0.9375rem;
 }
 
 .ai-markdown p {
@@ -104,7 +152,7 @@ body {
 
 .ai-markdown strong,
 .ai-markdown b {
-  color: #ffffff;
+  color: var(--color-ink);
   font-weight: 600;
 }
 
@@ -127,6 +175,10 @@ body {
   margin-bottom: 0.25rem;
 }
 
+.ai-markdown li::marker {
+  color: var(--color-ink-faint);
+}
+
 .ai-markdown li > ul,
 .ai-markdown li > ol {
   margin-top: 0.25rem;
@@ -135,31 +187,40 @@ body {
 
 .ai-markdown hr {
   border: 0;
-  border-top: 1px solid #27272a;
+  border-top: 1px solid var(--color-line);
   margin: 1.25rem 0;
 }
 
 .ai-markdown blockquote {
-  border-left: 3px solid #8b5cf6;
-  background: rgba(139, 92, 246, 0.05);
-  padding: 0.5rem 0.75rem;
+  border-left: 1px solid var(--color-line-strong);
+  padding: 0.125rem 0 0.125rem 0.875rem;
   margin: 0.75rem 0;
-  border-radius: 0 0.5rem 0.5rem 0;
-  color: #a1a1aa;
+  color: var(--color-ink-muted);
+}
+
+.ai-markdown a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-decoration-color: var(--color-ink-faint);
+  text-underline-offset: 3px;
+}
+
+.ai-markdown a:hover {
+  text-decoration-color: var(--color-ink);
 }
 
 .ai-markdown code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: #27272a;
-  color: #c4b5fd;
-  padding: 0.15rem 0.35rem;
+  font-family: var(--font-mono);
+  background: var(--color-raised);
+  color: var(--color-ink);
+  padding: 0.125rem 0.3rem;
   border-radius: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .ai-markdown pre {
-  background: #18181b;
-  border: 1px solid #27272a;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   overflow-x: auto;
@@ -169,25 +230,24 @@ body {
 .ai-markdown pre code {
   background: transparent;
   padding: 0;
-  color: #e4e4e7;
 }
 
 .ai-markdown table {
   width: 100%;
   border-collapse: collapse;
   margin: 0.75rem 0;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .ai-markdown th,
 .ai-markdown td {
-  border: 1px solid #27272a;
+  border-bottom: 1px solid var(--color-line);
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
 .ai-markdown th {
-  background: #18181b;
-  color: #f4f4f5;
+  color: var(--color-ink);
   font-weight: 600;
 }

@@ -2,7 +2,7 @@
 import { computed, signal, effect } from "@preact/signals";
 import { MAX_STOCKS } from "./constants";
 import type { Stock } from "./stocks";
-import { stockRecords, generateIntraday, getStockExpectedCurrency } from "./stocks";
+import { stockRecords, getStockExpectedCurrency } from "./stocks";
 import { UndoManager, type Command } from "./undo";
 import { GLOBAL_TICKER_DIRECTORY, createStockFromTicker } from "./tickerDatabase";
 import {
@@ -65,6 +65,38 @@ function persistWatchlist(stocks: Stock[]) {
     console.warn("Failed to persist watchlist", err);
   }
 }
+
+// First-time visitors land on a working watchlist instead of an empty one.
+// Prices are placeholders until the first sync, so rows hide them until then.
+export const STARTER_SYMBOLS = ["AAPL", "NVDA", "MSFT", "GOOGL", "SHOP", "XEQT"];
+const STARTER_SELECTION = "NVDA";
+const STARTER_FLAG_KEY = "marketpulse_starter_untouched";
+
+function createStarterWatchlist(): Stock[] {
+  return STARTER_SYMBOLS.map((symbol) => {
+    const catalog = stockRecords.find((s) => s.symbol === symbol);
+    return { ...(catalog ?? createStockFromTicker(symbol)), synced: false };
+  });
+}
+
+function isStarterUntouched(): boolean {
+  try {
+    return localStorage.getItem(STARTER_FLAG_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setStarterUntouched(untouched: boolean) {
+  try {
+    if (untouched) localStorage.setItem(STARTER_FLAG_KEY, "1");
+    else localStorage.removeItem(STARTER_FLAG_KEY);
+  } catch {}
+}
+
+const persistedWatchlist = loadPersistedWatchlist();
+const isFirstVisit = persistedWatchlist === null;
+if (isFirstVisit) setStarterUntouched(true);
 const UI_STATE_KEY = "marketpulse_ui_state";
 
 function loadUiState() {
@@ -102,21 +134,74 @@ function loadPortfolioState() {
   }
 }
 
+type Quote = BatchPriceResult[string];
+
+/** Merges a quote into a stock, returning the same object when nothing visible changed. */
+function applyQuote(stock: Stock, update: Quote): Stock {
+  const change =
+    update.change !== undefined ? update.change : Number((update.price - stock.open).toFixed(2));
+  const percentChange =
+    update.percentChange !== undefined
+      ? update.percentChange
+      : Number(((change / stock.open) * 100).toFixed(2));
+
+  const open = Number((update.price - change).toFixed(2));
+  const calcHigh = Math.max(update.price, open);
+  const calcLow = Math.min(update.price, open);
+
+  // Prefer the quote's day high/low; otherwise recalculate if the stored range is distorted
+  const dayHigh =
+    update.dayHigh !== undefined && update.dayHigh >= update.price
+      ? update.dayHigh
+      : stock.dayHigh > update.price * 1.15 || stock.dayHigh < update.price
+        ? calcHigh
+        : Math.max(stock.dayHigh, update.price);
+  const dayLow =
+    update.dayLow !== undefined && update.dayLow <= update.price && update.dayLow > 0
+      ? update.dayLow
+      : stock.dayLow < update.price * 0.85 || stock.dayLow > update.price
+        ? calcLow
+        : Math.min(stock.dayLow, update.price);
+  const currency = update.currency || stock.currency || getStockExpectedCurrency(stock.symbol, stock.sector);
+
+  if (
+    stock.synced !== false &&
+    stock.price === update.price &&
+    stock.change === change &&
+    stock.percentChange === percentChange &&
+    stock.dayHigh === dayHigh &&
+    stock.dayLow === dayLow &&
+    stock.currency === currency
+  ) {
+    return stock;
+  }
+
+  return { ...stock, currency, price: update.price, change, percentChange, dayHigh, dayLow, synced: true };
+}
+
 class StockStore {
-  // Initialize with persisted watchlist if present, otherwise empty watchlist
-  private initialStocks = loadPersistedWatchlist() ?? [];
+  // Initialize with the persisted watchlist, or the starter watchlist on a first visit
+  private initialStocks = persistedWatchlist ?? createStarterWatchlist();
   private initialUi = loadUiState();
 
   stocks = signal<Stock[]>(this.initialStocks);
-  selectedSymbols = signal<Set<string>>(new Set<string>(this.initialUi.selectedSymbols || []));
+  selectedSymbols = signal<Set<string>>(
+    new Set<string>(isFirstVisit ? [STARTER_SELECTION] : this.initialUi.selectedSymbols || [])
+  );
   viewMode = signal<ViewMode>(this.initialUi.viewMode || "chart");
   chartTimeframe = signal<Timeframe>(this.initialUi.chartTimeframe || "1D");
   chartMetric = signal<ChartMetric>("price");
 
   // Market session schedule (Mon-Fri 9:30 AM - 4:00 PM Eastern Time)
   isMarketOpen = signal<boolean>(isMarketOpen());
+
+  /** Re-evaluates the session so open/closed labels flip at 9:30 and 4:00 ET without a reload. */
+  refreshMarketStatus() {
+    const open = isMarketOpen();
+    if (open !== this.isMarketOpen.value) this.isMarketOpen.value = open;
+  }
   lastMarketUpdate = signal<string>(
-    this.initialUi.lastMarketUpdate || (isMarketOpen() ? "Regular Trading Session" : "4:00 PM ET (Market Close)")
+    this.initialUi.lastMarketUpdate || "Waiting for the first quotes"
   );
   searchQuery = signal<string>("");
 
@@ -271,6 +356,10 @@ class StockStore {
     
     if (data) {
       const dbSymbols = data.map((r: any) => r.symbol);
+      if (dbSymbols.length > 0 && isStarterUntouched()) {
+        localSymbols.length = 0;
+      }
+      setStarterUntouched(false);
 
       const missingInDb = localSymbols.filter(sym => !dbSymbols.includes(sym));
       if (missingInDb.length > 0) {
@@ -288,13 +377,16 @@ class StockStore {
           nextStocks.push(localStockMap.get(sym)!);
         } else {
           const catalog = stockRecords.find((s) => s.symbol === sym);
-          nextStocks.push(catalog ? { ...catalog } : createStockFromTicker(sym));
+          nextStocks.push({ ...(catalog ?? createStockFromTicker(sym)), synced: false });
         }
       }
       
       this.stocks.value = nextStocks;
       this.save();
       this.normalizeSelection();
+      if (this.selectedSymbols.value.size === 0 && nextStocks.length > 0) {
+        this.selectedSymbols.value = new Set([nextStocks[0].symbol]);
+      }
       
       if (this.stocks.value.length > 0) {
         this.syncAllStocks();
@@ -316,6 +408,22 @@ class StockStore {
     if (this.user.value) {
       supabase.from("watchlists").delete().match({ user_id: this.user.value.id }).then();
     }
+  }
+
+  /** Refills an empty watchlist with the starter stocks and opens the first chart. */
+  resetToStarterWatchlist() {
+    const existing = new Set(this.stocks.value.map((s) => s.symbol));
+    const additions = createStarterWatchlist().filter((s) => !existing.has(s.symbol));
+    if (additions.length === 0) return;
+    this.stocks.value = [...this.stocks.value, ...additions];
+    this.selectedSymbols.value = new Set([STARTER_SELECTION]);
+    this.viewMode.value = "chart";
+    this.save();
+    if (this.user.value) {
+      const userId = this.user.value.id;
+      supabase.from("watchlists").insert(additions.map((s) => ({ user_id: userId, symbol: s.symbol }))).then();
+    }
+    this.syncAllStocks(true);
   }
 
   canUndo = computed(() => {
@@ -352,9 +460,8 @@ class StockStore {
   statusLabel = computed(() => {
     const count = this.stocks.value.length;
     const selected = this.selectedSymbols.value.size;
-    if (count === 0) return "No Stocks (0 Selected)";
-    if (count === 1) return `1 Stock (${selected} Selected)`;
-    return `${count} Stocks (${selected} Selected)`;
+    const stocks = `${count} ${count === 1 ? "stock" : "stocks"}`;
+    return selected > 0 ? `${stocks} · ${selected} selected` : stocks;
   });
 
   filteredStocks = computed(() => {
@@ -398,108 +505,40 @@ class StockStore {
     newDayLow?: number,
     currency?: string
   ) {
-    const cleanSymbol = symbol.trim().toUpperCase();
-    this.lastMarketUpdate.value = `Updated at ${new Date().toLocaleTimeString()}`;
-    this.stocks.value = this.stocks.value.map((s) => {
-      if (s.symbol !== cleanSymbol) return s;
-
-      const change =
-        newChange !== undefined
-          ? newChange
-          : Number((newPrice - s.open).toFixed(2));
-      const percentChange =
-        newPctChange !== undefined
-          ? newPctChange
-          : Number(((change / s.open) * 100).toFixed(2));
-
-      const updatedHistory = (s.history || []).map((h) =>
-        h.year === 2026 ? { ...h, price: newPrice } : h
-      );
-      const updatedIntraday = generateIntraday(newPrice, change);
-
-      const open = Number((newPrice - change).toFixed(2));
-      const calcHigh = Math.max(newPrice, open);
-      const calcLow = Math.min(newPrice, open);
-
-      // Prefer genuine dayHigh/dayLow from quote; otherwise recalculate if previous was distorted
-      const dayHigh =
-        newDayHigh !== undefined && newDayHigh >= newPrice
-          ? newDayHigh
-          : (s.dayHigh > newPrice * 1.15 || s.dayHigh < newPrice ? calcHigh : Math.max(s.dayHigh, newPrice));
-
-      const dayLow =
-        newDayLow !== undefined && newDayLow <= newPrice && newDayLow > 0
-          ? newDayLow
-          : (s.dayLow < newPrice * 0.85 || s.dayLow > newPrice ? calcLow : Math.min(s.dayLow, newPrice));
-
-      return {
-        ...s,
-        currency: currency || s.currency || getStockExpectedCurrency(s.symbol, s.sector),
-        price: newPrice,
-        change,
-        percentChange,
-        dayHigh,
-        dayLow,
-        intraday: updatedIntraday,
-        history: updatedHistory,
-      };
-    });
-    setLastSyncTimestamp();
-    this.save();
+    this.batchUpdatePrices(
+      {
+        [symbol.trim().toUpperCase()]: {
+          price: newPrice,
+          change: newChange,
+          percentChange: newPctChange,
+          dayHigh: newDayHigh,
+          dayLow: newDayLow,
+          currency,
+        },
+      },
+      "Quote updated"
+    );
   }
 
-  batchUpdatePrices(priceMap: BatchPriceResult) {
-    this.lastMarketUpdate.value = `Synced at ${new Date().toLocaleTimeString()}`;
-    this.stocks.value = this.stocks.value.map((stock) => {
+  batchUpdatePrices(priceMap: BatchPriceResult, verb = "Quotes updated") {
+    this.lastMarketUpdate.value = `${verb} ${new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
+    let changed = false;
+    const next = this.stocks.value.map((stock) => {
       const sym = stock.symbol.toUpperCase();
       const update =
         priceMap[sym] ||
         (sym.endsWith(".TO") ? priceMap[sym.replace(".TO", "")] : priceMap[`${sym}.TO`]);
-
       if (!update) return stock;
-
-      const change =
-        update.change !== undefined
-          ? update.change
-          : Number((update.price - stock.open).toFixed(2));
-      const percentChange =
-        update.percentChange !== undefined
-          ? update.percentChange
-          : Number(((change / stock.open) * 100).toFixed(2));
-
-      const updatedHistory = (stock.history || []).map((h) =>
-        h.year === 2026 ? { ...h, price: update.price } : h
-      );
-      const updatedIntraday = generateIntraday(update.price, change);
-
-      const open = Number((update.price - change).toFixed(2));
-      const calcHigh = Math.max(update.price, open);
-      const calcLow = Math.min(update.price, open);
-
-      const dayHigh =
-        update.dayHigh !== undefined && update.dayHigh >= update.price
-          ? update.dayHigh
-          : (stock.dayHigh > update.price * 1.15 || stock.dayHigh < update.price ? calcHigh : Math.max(stock.dayHigh, update.price));
-
-      const dayLow =
-        update.dayLow !== undefined && update.dayLow <= update.price && update.dayLow > 0
-          ? update.dayLow
-          : (stock.dayLow < update.price * 0.85 || stock.dayLow > update.price ? calcLow : Math.min(stock.dayLow, update.price));
-
-      return {
-        ...stock,
-        currency: update.currency || stock.currency || getStockExpectedCurrency(stock.symbol, stock.sector),
-        price: update.price,
-        change,
-        percentChange,
-        dayHigh,
-        dayLow,
-        intraday: updatedIntraday,
-        history: updatedHistory,
-      };
+      const merged = applyQuote(stock, update);
+      if (merged !== stock) changed = true;
+      return merged;
     });
     setLastSyncTimestamp();
-    this.save();
+    // Rows whose quote didn't move keep their object identity, so they skip re-rendering.
+    if (changed) {
+      this.stocks.value = next;
+      this.save();
+    }
   }
 
   isSyncing(symbol?: string): boolean {
@@ -539,16 +578,16 @@ class StockStore {
         this.batchUpdatePrices(mergedResults);
         setLastSyncTimestamp();
         if (!silent) {
-          this.syncMessage.value = `✓ Synced ${count} stocks with live quotes`;
+          this.syncMessage.value = `Updated ${count} ${count === 1 ? "quote" : "quotes"}`;
         }
         return true;
       } else {
-        if (!silent) this.syncMessage.value = "No updates returned";
+        if (!silent) this.syncMessage.value = "Yahoo Finance didn’t return quotes. Try again shortly.";
         return false;
       }
     } catch (err: any) {
       if (!silent) {
-        this.syncMessage.value = err?.message || "Sync failed";
+        this.syncMessage.value = err?.message || "Couldn’t refresh quotes. Try again shortly.";
       }
       return false;
     } finally {
@@ -684,7 +723,8 @@ class StockStore {
       date: new Date().toISOString(),
       mcap: "—",
       history: [],
-      intraday: generateIntraday(resolved.price, resolved.change),
+      intraday: [],
+      synced: true,
     };
 
     this.addStock(newStock);
@@ -703,7 +743,7 @@ class StockStore {
     }
 
     const existingInCatalog = stockRecords.find((s) => s.symbol === cleanSymbol);
-    const stock = existingInCatalog ? { ...existingInCatalog } : createStockFromTicker(cleanSymbol);
+    const stock = { ...(existingInCatalog ?? createStockFromTicker(cleanSymbol)), synced: false };
     this.addStock(stock);
     this.syncSingleStock(stock.symbol);
   }
@@ -712,6 +752,7 @@ class StockStore {
     const insertIndex = this.stocks.value.length;
 
     const doAdd = () => {
+      setStarterUntouched(false);
       const next = this.stocks.value.slice();
       next.splice(insertIndex, 0, stock);
       this.stocks.value = next;
@@ -766,6 +807,7 @@ class StockStore {
     const topMostDeleted = selectedIndexes[0];
 
     const doDelete = () => {
+      setStarterUntouched(false);
       const next = this.stocks.value.filter(
         (stock) => !symbolsToDelete.has(stock.symbol)
       );

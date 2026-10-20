@@ -37,7 +37,8 @@ export type Stock = {
   peRatio: number;
   sector: string;
   currency?: string;
-  flash?: "up" | "down" | null;
+  /** false while the price is a catalog placeholder awaiting its first live quote. */
+  synced?: boolean;
   history: Point[];
   intraday: IntradayPoint[];
 };
