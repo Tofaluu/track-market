@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T16:40:00Z",
+  "title": "Design System: TrackMarket",
+  "extensions": {
+    "colorMeta": {
+      "canvas": { "role": "neutral", "displayName": "Canvas", "tonalRamp": ["#0b0d10", "#12151a", "#1a1e24", "#242932", "#323840", "#5c626c", "#8d939d", "#eef0f3"] },
+      "surface": { "role": "neutral", "displayName": "Surface" },
+      "raised": { "role": "neutral", "displayName": "Raised" },
+      "raised-hover": { "role": "neutral", "displayName": "Raised Hover" },
+      "line": { "role": "neutral", "displayName": "Line" },
+      "line-strong": { "role": "neutral", "displayName": "Line Strong" },
+      "ink": { "role": "primary", "displayName": "Desk White" },
+      "ink-soft": { "role": "neutral", "displayName": "Ink Soft" },
+      "ink-muted": { "role": "neutral", "displayName": "Ink Muted" },
+      "ink-subtle": { "role": "neutral", "displayName": "Ink Subtle" },
+      "ink-faint": { "role": "neutral", "displayName": "Ink Faint" },
+      "up": { "role": "secondary", "displayName": "Advance Green", "tonalRamp": ["#0d2e1f", "#13452e", "#1a5d3e", "#22784f", "#2b9462", "#38c785", "#74dba9", "#b5edd1"] },
+      "down": { "role": "secondary", "displayName": "Decline Red", "tonalRamp": ["#3a1116", "#561920", "#73222b", "#923039", "#b8404b", "#f2606f", "#f6939d", "#fbc8cd"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The live price in the stock header." },
+      "headline": { "displayName": "Headline", "purpose": "Company names and empty-state headings." },
+      "title": { "displayName": "Title", "purpose": "Symbols, section headings and report titles." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, help text and AI reports." },
+      "label": { "displayName": "Label", "purpose": "Uppercase stat names and section labels; the 11px floor." }
+    },
+    "shadows": [
+      { "name": "dialog", "value": "0 24px 64px -16px rgb(0 0 0 / 0.7)", "purpose": "Dialogs floating over the dimmed app." },
+      { "name": "popover", "value": "0 8px 24px -8px rgb(0 0 0 / 0.6)", "purpose": "Chart tooltip and toasts." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Toast entrance and other short arrivals." },
+      { "name": "duration-state", "value": "150ms", "purpose": "Hover and selection colour changes." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one decisive action on a screen: Sign in, Trade, Save.",
+      "html": "<button class=\"ds-btn-primary\">Trade</button>",
+      "css": ".ds-btn-primary { height: 32px; padding: 0 12px; border: 0; border-radius: 6px; background: #eef0f3; color: #0b0d10; font: 500 14px 'IBM Plex Sans', system-ui, sans-serif; transition: background-color 150ms; cursor: pointer; } .ds-btn-primary:hover { background: #ffffff; } .ds-btn-primary:focus-visible { outline: 2px solid #eef0f3; outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Everyday actions: Add stock, Research, Retry.",
+      "html": "<button class=\"ds-btn-secondary\">Add stock</button>",
+      "css": ".ds-btn-secondary { height: 32px; padding: 0 12px; border: 1px solid #323840; border-radius: 6px; background: #1a1e24; color: #cbcfd6; font: 500 14px 'IBM Plex Sans', system-ui, sans-serif; transition: background-color 150ms, color 150ms; cursor: pointer; } .ds-btn-secondary:hover { background: #242932; color: #eef0f3; } .ds-btn-secondary:focus-visible { outline: 2px solid #eef0f3; outline-offset: 2px; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive actions such as removing stocks.",
+      "html": "<button class=\"ds-btn-danger\">Remove 3 stocks</button>",
+      "css": ".ds-btn-danger { height: 32px; padding: 0 12px; border: 1px solid rgb(242 96 111 / 0.4); border-radius: 6px; background: transparent; color: #f2606f; font: 500 14px 'IBM Plex Sans', system-ui, sans-serif; cursor: pointer; } .ds-btn-danger:hover { background: rgb(242 96 111 / 0.1); } .ds-btn-danger:focus-visible { outline: 2px solid #eef0f3; outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Search, API key and form fields.",
+      "html": "<input class=\"ds-input\" placeholder=\"Filter by symbol or name\" />",
+      "css": ".ds-input { height: 36px; width: 260px; padding: 0 12px; border: 1px solid #323840; border-radius: 6px; background: #0b0d10; color: #eef0f3; font: 400 14px 'IBM Plex Sans', system-ui, sans-serif; } .ds-input::placeholder { color: #8d939d; } .ds-input:focus-visible { border-color: #8d939d; outline: 1px solid #a5abb4; outline-offset: 0; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Mutually exclusive views: timeframes, Chart/Research, Buy/Sell.",
+      "html": "<div class=\"ds-seg\"><button class=\"ds-seg-item is-active\">1D</button><button class=\"ds-seg-item\">5D</button><button class=\"ds-seg-item\">1M</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 2px; border: 1px solid #22262d; border-radius: 6px; background: #0b0d10; } .ds-seg-item { height: 28px; padding: 0 10px; border: 0; border-radius: 5px; background: transparent; color: #8d939d; font: 500 12px 'IBM Plex Sans', system-ui, sans-serif; cursor: pointer; } .ds-seg-item:hover { color: #eef0f3; } .ds-seg-item.is-active { background: #242932; color: #eef0f3; }"
+    },
+    {
+      "name": "Watchlist Row",
+      "kind": "custom",
+      "refersTo": "watchlist-row",
+      "description": "A stock in the left rail: symbol and name over price and change.",
+      "html": "<button class=\"ds-row\"><span class=\"ds-row-top\"><span><b>NVDA</b> <small>USD</small></span><span class=\"ds-num\">$216.78</span></span><span class=\"ds-row-bottom\"><span>NVIDIA</span><span class=\"ds-down\">-0.14% ↓</span></span></button>",
+      "css": ".ds-row { display: flex; flex-direction: column; gap: 2px; width: 280px; padding: 10px 12px; border: 0; border-radius: 6px; background: transparent; text-align: left; font-family: 'IBM Plex Sans', system-ui, sans-serif; cursor: pointer; } .ds-row:hover { background: #1a1e24; } .ds-row-top, .ds-row-bottom { display: flex; justify-content: space-between; } .ds-row-top { color: #eef0f3; font-size: 14px; } .ds-row-top small { color: #8d939d; font-size: 11px; } .ds-row-bottom { color: #a5abb4; font-size: 12px; } .ds-num { font-variant-numeric: tabular-nums; font-weight: 500; } .ds-down { color: #f2606f; font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trading Desk",
+    "overview": "TrackMarket is a tool people sit inside while markets move, so the interface behaves like a well-run trading desk: dense, quiet and precise. Data is the hero. The chrome is a set of cool, near-black neutrals that recede until a number changes, and colour is spent only where it carries meaning. Density is a feature. Rows are tight, labels are small and uppercase, and numerals are tabular so columns of prices line up. Hierarchy comes from weight, size and space rather than from colour or decoration: no gradients, glows, coloured side stripes or icon tiles. The look is dark by design, from the use scene: watching a screen for hours, often next to other trading tools.",
+    "keyCharacteristics": [
+      "Neutral surfaces with one tonal step per layer (canvas, surface, raised)",
+      "Green and red reserved for price direction, always paired with ↑/↓ or a sign",
+      "One family (IBM Plex Sans) for everything, tabular numerals for every figure",
+      "Hairline borders and tonal layering instead of shadows",
+      "Fast, functional motion; nothing loops except loading skeletons"
+    ],
+    "rules": [
+      { "name": "The Meaning-Only Rule", "body": "Green and red appear only when they say up or down (or destroy). A button, badge or heading is never coloured for emphasis.", "section": "colors" },
+      { "name": "The No-Gray-On-Color Rule", "body": "Text on a tinted surface uses Ink or the surface's own hue, never a mid-gray.", "section": "colors" },
+      { "name": "The Tabular Rule", "body": "Every number that can change (prices, changes, volumes, totals, times) is set with tabular-nums.", "section": "typography" },
+      { "name": "The Hairline Rule", "body": "Structure comes from 1px lines and tonal steps. A coloured border thicker than 1px never marks a card, row or callout.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep green and red for direction and destructive actions, and pair them with ↑/↓ or a sign.",
+      "Do use the shared classes in src/components/ui.ts for buttons, inputs and segmented controls.",
+      "Do set every changing number with tabular-nums.",
+      "Do show a skeleton, not a placeholder price, until a real quote arrives."
+    ],
+    "donts": [
+      "Don't add a brand accent colour, gradient, or glow; the previous violet gradient accents were removed deliberately.",
+      "Don't use coloured left stripes, icon tiles above headings, or grids of identical icon cards.",
+      "Don't render text below 11px or use Ink Faint for readable text.",
+      "Don't use emoji or Unicode glyphs as icons."
+    ]
+  }
+}

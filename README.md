@@ -5,13 +5,13 @@
 
 **A stock market dashboard and research terminal for US and Canadian markets.** Build a watchlist of NYSE, NASDAQ, and TSX stocks, watch prices update live during market hours, scrub through interactive charts, generate AI research reports grounded in Google Search, and practice trading with a paper portfolio.
 
-**[Try the live app →](https://trackmarket.dev)** The watchlist and charts work without an account. Sign in to paper trade, and add a free Gemini key for AI research.
+**[Try the live app →](https://trackmarket.dev)** A starter watchlist and a live chart load on your first visit, no account needed. Sign in to paper trade, and add a free Gemini key for AI research.
 
 ![TrackMarket showing NVIDIA's intraday chart with the crosshair tooltip and a live watchlist](docs/screenshot-chart.png)
 
 <table>
   <tr>
-    <td><img src="docs/screenshot-search.png" alt="The Add Stock dialog with category filters, live prices, and AI global search" /></td>
+    <td><img src="docs/screenshot-search.png" alt="The Add a stock dialog with category filters and a directory of US and TSX listings" /></td>
   </tr>
   <tr>
     <td align="center"><sub>Search a built-in ticker directory, or let Gemini identify any listed company by name</sub></td>
@@ -26,6 +26,7 @@
 - **Paper trading.** Sign in to start with $100,000 CAD in paper money. Buy and sell at live prices, track positions and all-time return, review your transaction history, and switch between CAD and USD at the live exchange rate.
 - **Cross-exchange search.** Filter a built-in directory of popular stocks and ETFs by category, or type any company name and have Gemini resolve its ticker, exchange, and currency.
 - **Undoable watchlist.** Shift-click to multi-select, use keyboard shortcuts, and undo or redo any edit. The watchlist syncs to your account when you're signed in.
+- **Keyboard and screen-reader friendly.** Dialogs trap focus and close on Escape, the chart scrubs with the arrow keys and carries a text summary, and up/down is never shown by colour alone.
 
 ## Architecture
 
@@ -50,17 +51,19 @@ flowchart LR
 ### Design decisions
 
 - **No backend of my own.** It's a static app on GitHub Pages. Yahoo Finance doesn't send CORS headers, so quotes go through a small Cloudflare Worker that adds them. In development, the Vite dev server proxies `/api/yahoo` instead. Every quote request tries its endpoints in order with a 4-second timeout.
-- **Fine-grained reactivity with Signals.** All state lives in one store ([`src/state.ts`](src/state.ts)) built from `@preact/signals`. A price tick only updates the DOM nodes that read that price, instead of re-rendering the watchlist, so polling every 20 seconds stays cheap.
+- **Only changed rows re-render.** All state lives in one store ([`src/state.ts`](src/state.ts)) built from `@preact/signals`. When a quote arrives, rows whose price didn't move keep the same object, and the memoized watchlist rows skip rendering, so polling every 20 seconds stays cheap even with 50 stocks.
+- **No fake numbers.** The starter watchlist and newly added stocks show a loading skeleton until their first real quote arrives, rather than a stale catalogue price, and the trade form won't place an order until then.
 - **Trades settle in the database.** The client only inserts a row into `transactions`. A Postgres trigger rejects the trade if the user lacks the cash or shares, otherwise it updates `positions` and the cash balance, and the client then reloads its portfolio. The trading rules therefore live in one place.
 - **Money is rounded before it's compared.** The ledger is stored in CAD at two decimal places. USD prices are converted and rounded the same way on the trade form and in the portfolio total. Before that, sub-cent differences between the two showed up as small "ghost" profits.
 - **Ground the model in real numbers.** The "past week" report fetches Yahoo's 5-day series first and puts the exact start price, end price, and range into the prompt. The model then explains the move instead of guessing it. Every prompt also includes today's date in ET, so the model searches for current facts rather than relying on its training data.
+- **A written design system.** [`DESIGN.md`](DESIGN.md) documents the tokens and rules: cool neutrals for the interface, green and red only for price direction, IBM Plex Sans with tabular numerals, and hairlines instead of shadows. Shared button, input and segmented-control classes live in [`src/components/ui.ts`](src/components/ui.ts).
 - **Undo as commands.** Watchlist edits and selections are `{ do, undo }` commands ([`src/undo.ts`](src/undo.ts)), and each one also mirrors its change to Supabase. Undoing a delete therefore restores it in your account too.
 
 ## Tech stack
 
 | Layer | Tools |
 |---|---|
-| Frontend | Preact 10, @preact/signals, TypeScript, Vite 7, Tailwind CSS 4, marked |
+| Frontend | Preact 10, @preact/signals, TypeScript, Vite 7, Tailwind CSS 4 (tokens via `@theme`), IBM Plex Sans, marked |
 | Market data | Yahoo Finance chart API via a Cloudflare Worker proxy |
 | AI | Google Gemini 3.8 Flash with Google Search grounding |
 | Data & auth | Supabase Auth + Postgres (watchlists, positions, transactions) |
@@ -79,7 +82,10 @@ src/
     gemini.ts         search-grounded quotes, ticker resolution, research prompts
     smartSync.ts      market-hours-aware polling schedule
     supabase.ts       Supabase client
-  components/         toolbar, watchlist/portfolio, chart, AI analyst, modals
+  components/         toolbar, watchlist/portfolio, chart, research view, dialogs
+    ui.ts             shared button, input and segmented-control classes
+    Dialog.tsx        focus-trapping dialog shell used by every modal
+DESIGN.md             design tokens and rules
 ```
 
 ## Running locally
