@@ -8,13 +8,16 @@ import { input, label, segment, segmented } from "./ui";
 
 const STARTING_CASH_CAD = 100_000;
 
-function ChangeText({ value, percent }: { value?: number; percent: number }) {
+// In a list row pass `class="shrink-0 whitespace-nowrap"`, so a long name beside it truncates instead of wrapping
+// the change onto a second line.
+function ChangeText({ value, percent, class: extra = "" }: { value?: number; percent: number; class?: string }) {
   const up = (value ?? percent) >= 0;
   return (
-    <span class={`tabular-nums ${up ? "text-up" : "text-down"}`}>
+    <span class={`tabular-nums ${up ? "text-up" : "text-down"} ${extra}`}>
       {value !== undefined && `${formatSignedChange(value)} `}
       {value !== undefined ? `(${formatPercentChange(percent)})` : formatPercentChange(percent)}
-      <span aria-hidden="true"> {up ? "↑" : "↓"}</span>
+      {/* A non-breaking space keeps the arrow with its number wherever the text wraps */}
+      <span aria-hidden="true">{" "}{up ? "↑" : "↓"}</span>
       <span class="sr-only">{up ? " up" : " down"}</span>
     </span>
   );
@@ -52,7 +55,7 @@ const WatchlistRow = memo(function WatchlistRow({ stock, selected }: { stock: St
         </div>
         <div class="flex w-full items-baseline justify-between gap-3 text-xs">
           <span class="truncate text-ink-muted">{stock.name}</span>
-          {pending ? <span class="text-ink-faint">—</span> : <ChangeText percent={stock.percentChange} />}
+          {pending ? <span class="shrink-0 text-ink-faint">—</span> : <ChangeText percent={stock.percentChange} class="shrink-0 whitespace-nowrap" />}
         </div>
       </button>
     </li>
@@ -182,7 +185,7 @@ function PortfolioPanel() {
                       <span class="truncate text-ink-muted">
                         Avg {formatPrice(avgCostNative)} {stock?.currency || (isCad ? "CAD" : "USD")}
                       </span>
-                      <ChangeText value={toDisplay(pnlCad)} percent={pnlPct} />
+                      <ChangeText value={toDisplay(pnlCad)} percent={pnlPct} class="shrink-0 whitespace-nowrap" />
                     </div>
                   </button>
                 </li>
