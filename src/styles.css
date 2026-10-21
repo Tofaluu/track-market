@@ -90,11 +90,58 @@ input[type="search"]::-webkit-search-cancel-button {
   background: var(--color-ink-faint);
 }
 
+/* Motion: short and ease-out. Nothing waits on an animation before it can be read or clicked. */
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+}
+/* pathLength="1" on the path makes one dash the whole line */
+@keyframes draw-line {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+@keyframes tick-up {
+  from { background-color: color-mix(in srgb, var(--color-up) 30%, transparent); }
+}
+@keyframes tick-down {
+  from { background-color: color-mix(in srgb, var(--color-down) 30%, transparent); }
+}
+
+.enter-fade { animation: fade-in 200ms var(--ease-out-quart); }
+.enter-rise { animation: rise-in 280ms var(--ease-out-quart); }
+.dialog-overlay { animation: fade-in 150ms var(--ease-out-quart); }
+.dialog-panel { animation: dialog-in 200ms var(--ease-out-quart); }
+.chart-line { animation: draw-line 650ms var(--ease-out-quart); }
+.chart-area { animation: fade-in 450ms 200ms var(--ease-out-quart) backwards; }
+
+/* A price flashes green or red when a new quote moves it. The padding gives the tint room around the digits
+   without moving them. */
+.tick-up,
+.tick-down {
+  border-radius: 3px;
+  margin: 0 -3px;
+  padding: 0 3px;
+}
+.tick-up { animation: tick-up 1s ease-out; }
+.tick-down { animation: tick-down 1s ease-out; }
+
 /* Reduced motion: drop looping and travelling motion, keep state feedback. */
 @media (prefers-reduced-motion: reduce) {
   .animate-ping,
   .animate-pulse {
     animation: none;
+  }
+  .chart-line {
+    animation: none;
+  }
+  .enter-rise,
+  .dialog-panel {
+    animation-name: fade-in;
   }
   .animate-spin {
     animation-duration: 2s;

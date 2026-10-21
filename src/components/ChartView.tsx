@@ -5,6 +5,7 @@ import { fetchYahooChartSeries, type YahooChartPoint, type YahooHistoricalChart 
 import { store } from "../state";
 import type { Stock } from "../stocks";
 import { btn, label, segment, segmented, size } from "./ui";
+import { usePriceTick } from "./usePriceTick";
 
 type Timeframe = "1D" | "5D" | "1M" | "6M" | "1Y" | "5Y" | "ALL";
 
@@ -50,17 +51,28 @@ export function ChartView({ stock }: ChartViewProps) {
     return () => ro.disconnect();
   }, []);
 
+  // Which stock and timeframe the chart data belongs to. Until the new data lands the chart shows its loading
+  // state, so the old series never renders for a frame under the new timeframe's scale.
+  const chartKey = `${stock.symbol}:${timeframe}`;
+  const [loadedFor, setLoadedFor] = useState("");
+  const requestRef = useRef(0);
+  const isStale = loadedFor !== chartKey;
+
   const loadChartData = async (tf: Timeframe) => {
+    const request = ++requestRef.current;
     setIsLoading(true);
     setHasError(false);
     setHoveredIndex(null);
     setSelectedPoint(null);
     const result = await fetchYahooChartSeries(stock.symbol, tf, stock.sector, stock.currency);
+    // A newer stock or timeframe was picked while this one loaded
+    if (request !== requestRef.current) return;
     if (result && result.points.length > 0) {
       setChartData(result);
     } else {
       setHasError(true);
     }
+    setLoadedFor(`${stock.symbol}:${tf}`);
     setIsLoading(false);
   };
 
@@ -70,7 +82,7 @@ export function ChartView({ stock }: ChartViewProps) {
 
   // Keep the 1D line's last point in step with live quotes from the sync scheduler
   useEffect(() => {
-    if (timeframe !== "1D" || !chartData || chartData.points.length === 0 || stock.synced === false) return;
+    if (timeframe !== "1D" || isStale || !chartData || chartData.points.length === 0 || stock.synced === false) return;
     const lastPoint = chartData.points[chartData.points.length - 1];
     if (!lastPoint || lastPoint.price === stock.price) return;
     const now = new Date();
@@ -84,7 +96,7 @@ export function ChartView({ stock }: ChartViewProps) {
     setChartData({ ...chartData, currentPrice: stock.price, points });
   }, [stock.price, timeframe]);
 
-  const points = chartData?.points || [];
+  const points = isStale ? [] : chartData?.points || [];
   const baselinePrice = useMemo(() => {
     if (!chartData) return stock.price;
     if (timeframe === "1D") return chartData.previousClose;
@@ -115,6 +127,7 @@ export function ChartView({ stock }: ChartViewProps) {
       : 0
     : live?.percentChange ?? 0;
   const isPositive = displayChange >= 0;
+  const tick = usePriceTick(stock.synced === false ? null : stock.price, stock.symbol);
 
   const plotWidth = Math.max(dimensions.width - PADDING.left - PADDING.right, 50);
   const plotHeight = Math.max(dimensions.height - PADDING.top - PADDING.bottom, 50);
@@ -263,7 +276,8 @@ export function ChartView({ stock }: ChartViewProps) {
   return (
     <div class="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-canvas px-4 py-5 sm:px-6 md:overflow-hidden">
       <header class="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-4 pb-5">
-        <div class="min-w-0">
+        {/* Keyed so switching stocks fades the new name and price in */}
+        <div key={stock.symbol} class="enter-fade min-w-0">
           <div class="flex items-center gap-2">
             <button
               type="button"
@@ -291,7 +305,13 @@ export function ChartView({ stock }: ChartViewProps) {
 
           <div class="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <span class="text-3xl font-semibold tracking-[-0.02em] tabular-nums text-ink">
-              {displayPrice !== undefined ? formatPrice(displayPrice) : "—"}
+              {displayPrice === undefined ? (
+                "—"
+              ) : selectedPoint ? (
+                formatPrice(displayPrice)
+              ) : (
+                <span {...tick}>{formatPrice(displayPrice)}</span>
+              )}
             </span>
             {displayPrice !== undefined && (
               <span class={`text-sm font-medium tabular-nums ${isPositive ? "text-up" : "text-down"}`}>
@@ -371,7 +391,7 @@ export function ChartView({ stock }: ChartViewProps) {
             {summary}
           </p>
         )}
-        {isLoading ? (
+        {isLoading || isStale ? (
           <div class="absolute inset-0 p-6" aria-label={`Loading ${stock.symbol} chart`}>
             <div class="h-full w-full animate-pulse rounded bg-surface" />
           </div>
@@ -413,8 +433,17 @@ export function ChartView({ stock }: ChartViewProps) {
               />
             )}
 
-            <path d={areaD} fill={`url(#${gradientId})`} />
-            <path d={pathD} fill="none" class={lineClass} stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+            {/* The line draws in once per load; live quotes then move its end without redrawing it */}
+            <path d={areaD} fill={`url(#${gradientId})`} class="chart-area" />
+            <path
+              d={pathD}
+              pathLength={1}
+              fill="none"
+              class={`chart-line ${lineClass}`}
+              stroke-width="1.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
 
             {xLabels.map((lbl, i) => (
               <text

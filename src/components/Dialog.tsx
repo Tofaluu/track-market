@@ -59,7 +59,7 @@ export function Dialog({ onClose, labelledBy, width = "max-w-md", children }: Di
 
   return (
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      class="dialog-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={onClose}
     >
       <div
@@ -67,7 +67,7 @@ export function Dialog({ onClose, labelledBy, width = "max-w-md", children }: Di
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        class={`w-full ${width} overflow-hidden rounded-xl border border-line-strong bg-surface shadow-[0_24px_64px_-16px_rgb(0_0_0_/_0.7)]`}
+        class={`dialog-panel w-full ${width} overflow-hidden rounded-xl border border-line-strong bg-surface shadow-[0_24px_64px_-16px_rgb(0_0_0_/_0.7)]`}
         onClick={(event) => event.stopPropagation()}
       >
         {children}

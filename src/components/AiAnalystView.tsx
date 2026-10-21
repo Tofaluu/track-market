@@ -240,7 +240,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
                 </div>
               </div>
             ) : analysisText ? (
-              <div class="max-w-[72ch]">
+              <div class="enter-rise max-w-[72ch]">
                 <div class="mb-5 flex items-baseline justify-between gap-4 border-b border-line pb-3">
                   <h3 class="text-base font-semibold text-balance text-ink">{reportTitle}</h3>
                   <button type="button" onClick={copyReport} class={`${btn.ghost} ${size.sm} shrink-0`}>

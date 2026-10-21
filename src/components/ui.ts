@@ -1,6 +1,6 @@
 // Shared class vocabulary so every button, input and chip has the same shape and states.
 const base =
-  "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-[color,background-color,border-color,transform] duration-150 ease-out motion-safe:enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40";
 
 export const btn = {
   primary: `${base} bg-ink text-canvas hover:bg-white`,

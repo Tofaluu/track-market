@@ -5,6 +5,7 @@ import { formatPercentChange, formatPrice, formatSignedChange } from "../format"
 import { store } from "../state";
 import type { Stock } from "../stocks";
 import { input, label, segment, segmented } from "./ui";
+import { usePriceTick, useRevealed } from "./usePriceTick";
 
 const STARTING_CASH_CAD = 100_000;
 
@@ -31,6 +32,8 @@ const rowClass = (selected: boolean) =>
 // Memoized so a price tick only re-renders the rows whose quote changed.
 const WatchlistRow = memo(function WatchlistRow({ stock, selected }: { stock: Stock; selected: boolean }) {
   const pending = stock.synced === false;
+  const tick = usePriceTick(pending ? null : stock.price);
+  const reveal = useRevealed(pending) ? "enter-fade" : "";
   return (
     <li>
       <button
@@ -50,12 +53,18 @@ const WatchlistRow = memo(function WatchlistRow({ stock, selected }: { stock: St
           {pending ? (
             <span class="h-3.5 w-14 animate-pulse rounded bg-raised-hover" aria-label="Loading price" />
           ) : (
-            <span class="text-sm font-medium tabular-nums text-ink">{formatPrice(stock.price)}</span>
+            <span class={`text-sm font-medium tabular-nums text-ink ${reveal}`}>
+              <span {...tick}>{formatPrice(stock.price)}</span>
+            </span>
           )}
         </div>
         <div class="flex w-full items-baseline justify-between gap-3 text-xs">
           <span class="truncate text-ink-muted">{stock.name}</span>
-          {pending ? <span class="shrink-0 text-ink-faint">—</span> : <ChangeText percent={stock.percentChange} class="shrink-0 whitespace-nowrap" />}
+          {pending ? (
+            <span class="shrink-0 text-ink-faint">—</span>
+          ) : (
+            <ChangeText percent={stock.percentChange} class={`shrink-0 whitespace-nowrap ${reveal}`} />
+          )}
         </div>
       </button>
     </li>
