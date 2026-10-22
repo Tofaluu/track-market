@@ -95,7 +95,7 @@ input[type="search"]::-webkit-search-cancel-button {
   from { opacity: 0; }
 }
 @keyframes rise-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
 }
 @keyframes dialog-in {
   from { opacity: 0; transform: translateY(4px) scale(0.98); }
@@ -113,7 +113,8 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 .enter-fade { animation: fade-in 200ms var(--ease-out-quart); }
-.enter-rise { animation: rise-in 280ms var(--ease-out-quart); }
+/* A list comes in top to bottom; each item sets its own --enter-delay */
+.enter-rise { animation: rise-in 280ms var(--ease-out-quart) var(--enter-delay, 0ms) backwards; }
 .dialog-overlay { animation: fade-in 150ms var(--ease-out-quart); }
 .dialog-panel { animation: dialog-in 200ms var(--ease-out-quart); }
 .chart-line { animation: draw-line 650ms var(--ease-out-quart); }
@@ -129,6 +130,23 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 .tick-up { animation: tick-up 1s ease-out; }
 .tick-down { animation: tick-down 1s ease-out; }
+
+/* A report writes itself in line by line: a soft edge about four lines deep travels down it and uncovers the text
+   as it passes. Nothing moves, so it stays on under reduced motion. AiAnalystView sets the pace from its height. */
+@property --reveal-edge {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 100000px;
+}
+@keyframes reveal-sweep {
+  from { --reveal-edge: 0%; }
+  to { --reveal-edge: calc(100% + 120px); }
+}
+.reveal-sweep {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(var(--reveal-edge) - 120px), transparent var(--reveal-edge));
+  mask-image: linear-gradient(to bottom, #000 calc(var(--reveal-edge) - 120px), transparent var(--reveal-edge));
+  animation: reveal-sweep 1s cubic-bezier(0.4, 0.5, 0.6, 1) backwards;
+}
 
 /* Reduced motion: drop looping and travelling motion, keep state feedback. */
 @media (prefers-reduced-motion: reduce) {

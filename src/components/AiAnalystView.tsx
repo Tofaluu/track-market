@@ -1,5 +1,5 @@
 // Research view: Gemini reports grounded in live Google Search, rendered as sanitized markdown.
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "preact/hooks";
 import { marked } from "marked";
 import { formatPercentChange, formatPrice, formatSignedChange } from "../format";
 import { analyzeCompanyWithAI, getGeminiApiKey, type AnalysisTopic } from "../services/gemini";
@@ -42,6 +42,14 @@ const TOPICS: { id: Exclude<AnalysisTopic, "custom">; title: string; blurb: stri
 // Reports survive switching between Chart and Research, and between stocks
 const reportCache = new Map<string, CachedReport>();
 
+// A report writes itself in line by line at a steady reading pace, so a long one takes longer; the cap keeps it from
+// holding back what's below the fold. styles.css draws the sweep.
+const paceSweep = (event: AnimationEvent) => {
+  const report = event.currentTarget as HTMLElement;
+  if (event.target !== report || event.animationName !== "reveal-sweep") return;
+  report.style.animationDuration = `${Math.round(Math.min(2400, Math.max(600, (report.offsetHeight + 120) / 0.6)))}ms`;
+};
+
 export function AiAnalystView({ stock }: AiAnalystViewProps) {
   const cached = reportCache.get(stock.symbol.toUpperCase());
   const [activeTopic, setActiveTopic] = useState<AnalysisTopic | null>(cached?.activeTopic ?? null);
@@ -51,6 +59,23 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const topicListRef = useRef<HTMLUListElement>(null);
+  const [marker, setMarker] = useState<{ top: number; height: number; glide: boolean } | null>(null);
+
+  // The highlight behind the chosen report glides to the next one; it appears in place the first time, and the list
+  // re-measures when its width changes and the blurbs rewrap
+  useLayoutEffect(() => {
+    const list = topicListRef.current;
+    if (!list) return;
+    const place = (glide: boolean) => {
+      const chosen = list.querySelector<HTMLElement>('[aria-current="true"]');
+      setMarker((prev) => (chosen ? { top: chosen.offsetTop, height: chosen.offsetHeight, glide: glide && prev !== null } : null));
+    };
+    place(true);
+    const observer = new ResizeObserver(() => place(false));
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [activeTopic]);
 
   useEffect(() => {
     const existing = reportCache.get(stock.symbol.toUpperCase());
@@ -119,7 +144,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
   return (
     <div class="flex h-full min-h-0 flex-1 flex-col bg-canvas">
       <header class="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-line px-4 py-5 sm:px-6">
-        <div class="min-w-0">
+        <div key={stock.symbol} class="enter-fade min-w-0">
           <div class="flex items-center gap-2">
             <button
               type="button"
@@ -158,16 +183,25 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
           <nav aria-label="Reports" class="space-y-6">
             <div>
               <h3 class={label}>Reports</h3>
-              <ul class="mt-2 space-y-0.5">
-                {TOPICS.map((topic) => (
-                  <li key={topic.id}>
+              <ul ref={topicListRef} class="relative mt-2 space-y-0.5">
+                {marker && (
+                  <span
+                    aria-hidden="true"
+                    class={`pointer-events-none absolute inset-x-0 top-0 rounded-md bg-raised-hover ${
+                      marker.glide ? "transition-[transform,height] duration-200 ease-out" : ""
+                    }`}
+                    style={{ transform: `translateY(${marker.top}px)`, height: `${marker.height}px` }}
+                  />
+                )}
+                {TOPICS.map((topic, i) => (
+                  <li key={topic.id} class="enter-rise" style={{ "--enter-delay": `${i * 35}ms` }}>
                     <button
                       type="button"
                       onClick={() => runReport(topic.id)}
                       disabled={isLoading}
                       aria-current={activeTopic === topic.id ? "true" : undefined}
-                      class={`w-full rounded-md px-3 py-2 text-left transition-colors disabled:cursor-wait ${
-                        activeTopic === topic.id ? "bg-raised-hover" : "hover:bg-raised"
+                      class={`relative w-full rounded-md px-3 py-2 text-left transition-colors disabled:cursor-wait ${
+                        activeTopic === topic.id ? "" : "hover:bg-raised"
                       }`}
                     >
                       <span class="block text-sm font-medium text-ink">{topic.title}</span>
@@ -183,7 +217,8 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
                 e.preventDefault();
                 if (customQuestion.trim()) runReport("custom", customQuestion.trim());
               }}
-              class="space-y-2"
+              class="enter-rise space-y-2"
+              style={{ "--enter-delay": "140ms" }}
             >
               <label for="research-question" class={label}>
                 Ask a question
@@ -208,7 +243,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
             </form>
           </nav>
 
-          <article aria-live="polite" aria-busy={isLoading} class="min-w-0">
+          <article aria-live="polite" aria-busy={isLoading} class="enter-fade min-w-0" style={{ animationDelay: "60ms", animationFillMode: "backwards" }}>
             {errorMsg ? (
               <div role="alert" class="max-w-prose">
                 <h3 class="text-sm font-semibold text-ink">The report didn’t load</h3>
@@ -229,7 +264,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
                 </div>
               </div>
             ) : isLoading ? (
-              <div class="max-w-[72ch]">
+              <div class="enter-fade max-w-[72ch]">
                 <p class="text-sm text-ink-muted">
                   Searching the web and writing {reportTitle ? `“${reportTitle}”` : "the report"} for {stock.symbol}…
                 </p>
@@ -240,7 +275,7 @@ export function AiAnalystView({ stock }: AiAnalystViewProps) {
                 </div>
               </div>
             ) : analysisText ? (
-              <div class="enter-rise max-w-[72ch]">
+              <div key={`${stock.symbol}:${activeTopic}`} class="reveal-sweep max-w-[72ch]" onAnimationStart={paceSweep}>
                 <div class="mb-5 flex items-baseline justify-between gap-4 border-b border-line pb-3">
                   <h3 class="text-base font-semibold text-balance text-ink">{reportTitle}</h3>
                   <button type="button" onClick={copyReport} class={`${btn.ghost} ${size.sm} shrink-0`}>
