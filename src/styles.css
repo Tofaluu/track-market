@@ -52,6 +52,24 @@ body {
   color: var(--color-ink);
 }
 
+/* Tailwind v4 defaults buttons to the arrow cursor; restore the pointer cursor for interactive controls. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
 /* One focus treatment for every control, shown for keyboard users only. */
 :focus-visible {
   outline: 2px solid var(--color-ink);
