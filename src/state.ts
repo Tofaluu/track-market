@@ -215,6 +215,7 @@ class StockStore {
   user = signal<any>(null);
   isAuthModalOpen = signal<boolean>(false);
   authModalIntent = signal<"portfolio" | null>(null);
+  isPasswordRecovery = signal<boolean>(false);
   isTradeModalOpen = signal<boolean>(false);
   isAddModalOpen = signal<boolean>(false);
 
@@ -248,6 +249,12 @@ class StockStore {
     // Fetch live FX rate
     this.fetchFxRate();
 
+    // If the user landed here from a password-reset email link, open the reset form right away
+    if (typeof window !== "undefined" && window.location.hash.includes("type=recovery")) {
+      this.isPasswordRecovery.value = true;
+      this.isAuthModalOpen.value = true;
+    }
+
     // Check initial auth state
     supabase.auth.getSession().then(({ data: { session } }) => {
       this.session.value = session;
@@ -257,9 +264,13 @@ class StockStore {
     });
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       this.session.value = session;
       this.user.value = session?.user ?? null;
+      if (event === "PASSWORD_RECOVERY") {
+        this.isPasswordRecovery.value = true;
+        this.isAuthModalOpen.value = true;
+      }
       if (session?.user) {
         setTimeout(() => {
           this.loadSupabaseWatchlist();
