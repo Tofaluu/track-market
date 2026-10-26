@@ -30,8 +30,10 @@ export function Toolbar({ onDelete, onUndo, onRedo }: ToolbarProps) {
       <header class="relative z-20 flex h-14 shrink-0 items-center justify-between gap-2 border-b border-line bg-surface px-3 md:px-4">
         <div class="flex min-w-0 items-center gap-4">
           <div class="flex items-center gap-2 text-ink">
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 17l5-5 4 4 8-8m0 0h-5m5 0v5" />
+            <svg class="h-5 w-5 text-ink" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="4" class="stroke-line-strong fill-raised/40" />
+              <path d="M7 14l3-3 3 3 4-5" />
+              <path d="M14 9h3v3" />
             </svg>
             <span class="text-[0.9375rem] font-semibold tracking-[-0.01em]">{APP_TITLE}</span>
           </div>

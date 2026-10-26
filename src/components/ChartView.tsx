@@ -481,7 +481,7 @@ export function ChartView({ stock }: ChartViewProps) {
 
         {hoveredPoint && hovered && (
           <div
-            class="pointer-events-none absolute z-20 rounded-md border border-line-strong bg-raised px-3 py-2 text-xs shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.6)]"
+            class="enter-fade pointer-events-none absolute z-20 rounded-md border border-line-strong bg-raised px-3 py-2 text-xs shadow-[0_8px_24px_-8px_rgb(0_0_0_/_0.6)]"
             style={{
               left: `${Math.min(Math.max(8, hovered.x - 72), dimensions.width - 168)}px`,
               top: `${Math.max(8, hovered.y - 92)}px`,

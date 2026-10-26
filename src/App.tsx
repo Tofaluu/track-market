@@ -44,6 +44,39 @@ export function App() {
         }
       }
 
+      // Arrow Up/Down or J/K to step through visible watchlist stocks
+      if (
+        (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "j" || event.key === "k") &&
+        !event.shiftKey
+      ) {
+        if (
+          store.isAddModalOpen.value ||
+          store.isAuthModalOpen.value ||
+          store.isTradeModalOpen.value
+        ) {
+          return;
+        }
+
+        const visibleStocks = store.filteredStocks.value;
+        if (visibleStocks.length > 0) {
+          const currentSelected = store.selectedStock.value?.symbol;
+          const currentIndex = currentSelected
+            ? visibleStocks.findIndex((s) => s.symbol === currentSelected)
+            : -1;
+
+          let nextIndex = 0;
+          if (event.key === "ArrowDown" || event.key === "j") {
+            nextIndex = currentIndex < visibleStocks.length - 1 ? currentIndex + 1 : 0;
+          } else {
+            nextIndex = currentIndex > 0 ? currentIndex - 1 : visibleStocks.length - 1;
+          }
+
+          store.clickStock(visibleStocks[nextIndex].symbol, false);
+          event.preventDefault();
+          return;
+        }
+      }
+
       const key = event.key.toLowerCase();
       if (!["a", "d", "c", "u", "r"].includes(key)) return;
       if (!event.shiftKey) return;

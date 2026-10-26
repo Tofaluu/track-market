@@ -262,7 +262,15 @@ function AuthDialog() {
             </p>
           )}
 
-          <button type="submit" disabled={loading} class={`${btn.primary} ${size.lg} w-full`}>
+          <button
+            type="submit"
+            disabled={
+              loading ||
+              (mode === "forgot" && !email.trim()) ||
+              (mode === "reset" && (password.length < 6 || password !== confirmPassword))
+            }
+            class={`${btn.primary} ${size.lg} w-full`}
+          >
             {loading
               ? mode === "login"
                 ? "Signing in…"

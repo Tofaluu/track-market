@@ -116,7 +116,7 @@ input[type="search"]::-webkit-search-cancel-button {
   from { opacity: 0; transform: translateY(4px); }
 }
 @keyframes dialog-in {
-  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
 }
 /* pathLength="1" on the path makes one dash the whole line */
 @keyframes draw-line {
@@ -134,7 +134,10 @@ input[type="search"]::-webkit-search-cancel-button {
 /* A list comes in top to bottom; each item sets its own --enter-delay */
 .enter-rise { animation: rise-in 280ms var(--ease-out-quart) var(--enter-delay, 0ms) backwards; }
 .dialog-overlay { animation: fade-in 150ms var(--ease-out-quart); }
-.dialog-panel { animation: dialog-in 200ms var(--ease-out-quart); }
+.dialog-panel {
+  transform-origin: center;
+  animation: dialog-in 200ms var(--ease-out-quart);
+}
 .chart-line { animation: draw-line 650ms var(--ease-out-quart); }
 .chart-area { animation: fade-in 450ms 200ms var(--ease-out-quart) backwards; }
 

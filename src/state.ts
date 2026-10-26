@@ -218,6 +218,7 @@ class StockStore {
   isPasswordRecovery = signal<boolean>(false);
   isTradeModalOpen = signal<boolean>(false);
   isAddModalOpen = signal<boolean>(false);
+  addModalInitialQuery = signal<string>("");
 
 
   // Portfolio state

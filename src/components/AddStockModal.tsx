@@ -28,10 +28,15 @@ export function AddStockModal({ isOpen, onClose }: AddStockModalProps) {
 }
 
 function AddStockDialog({ onClose }: { onClose: () => void }) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(store.addModalInitialQuery.value);
   const [category, setCategory] = useState<Category>("All");
   const [isLookingUp, setIsLookingUp] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
+
+  const handleClose = () => {
+    store.addModalInitialQuery.value = "";
+    onClose();
+  };
 
   const currentSymbols = useMemo(
     () => new Set(store.stocks.value.map((s) => s.symbol.toUpperCase())),
@@ -55,7 +60,7 @@ function AddStockDialog({ onClose }: { onClose: () => void }) {
 
   const addTicker = (ticker: TickerInfo) => {
     store.addStockBySymbol(ticker.symbol);
-    onClose();
+    handleClose();
   };
 
   const lookUp = async () => {
@@ -65,7 +70,7 @@ function AddStockDialog({ onClose }: { onClose: () => void }) {
     try {
       const resolved = await searchAndResolveStockWithAI(trimmed);
       store.addVerifiedStock(resolved);
-      onClose();
+      handleClose();
     } catch (err: any) {
       setLookupError(err?.message || `No NYSE, NASDAQ or TSX listing found for “${trimmed}”.`);
     } finally {
@@ -82,13 +87,13 @@ function AddStockDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Dialog onClose={onClose} labelledBy="add-stock-title" width="max-w-xl">
+    <Dialog onClose={handleClose} labelledBy="add-stock-title" width="max-w-xl">
       <div class="flex max-h-[85vh] flex-col">
         <DialogHeader
           id="add-stock-title"
           title="Add a stock"
           description="Pick from popular US and TSX listings, or look up any company by name."
-          onClose={onClose}
+          onClose={handleClose}
         />
 
         <div class="space-y-3 border-b border-line px-5 py-4">

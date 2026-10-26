@@ -25,8 +25,8 @@ function ChangeText({ value, percent, class: extra = "" }: { value?: number; per
 }
 
 const rowClass = (selected: boolean) =>
-  `flex w-full flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-colors duration-150 ${
-    selected ? "bg-raised-hover" : "hover:bg-raised"
+  `flex w-full cursor-pointer flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-[background-color,transform] duration-150 ease-out active:scale-[0.985] ${
+    selected ? "bg-raised-hover" : "hover:bg-raised active:bg-raised-hover"
   }`;
 
 // Memoized so a price tick only re-renders the rows whose quote changed.
@@ -317,7 +317,20 @@ export function StockList() {
               </button>
             </div>
           ) : (
-            <EmptyNote>No stocks match “{searchQuery}”.</EmptyNote>
+            <div class="px-4 py-8 text-center">
+              <p class="text-sm text-ink-muted">No stocks match “{searchQuery}”.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  store.addModalInitialQuery.value = searchQuery;
+                  store.isAddModalOpen.value = true;
+                }}
+                class="mt-2.5 inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-line-strong bg-raised px-2.5 py-1.5 text-xs font-medium text-ink-soft transition-colors hover:bg-raised-hover hover:text-ink active:scale-[0.97]"
+              >
+                <span>Add “{searchQuery}” to watchlist</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
           )
         ) : (
           <ul class="space-y-0.5 p-1.5">
